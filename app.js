@@ -77,7 +77,9 @@ const I18N = {
         natureN2000:     'Natura 2000 (Noorderpark ~8 km)',
         natureNote:      'Mitigatie via vleermuisdetectoren, stilstandprotocollen en ecologisch onderzoek in MER.',
         landscapeTitle:  '🌆 Landschap & zichtbaarheid',
-        landscapeNote:   'Visuele impact hangt sterk af van bebouwing, bomen en exacte positie. Formeel landschapsonderzoek volgt in MER.',
+        landscapeNote:   'Schijnbare hoogte is een eenvoudige geometrische schatting op basis van tiphoogte en afstand. Werkelijke zichtbaarheid hangt ook sterk af van bebouwing, bomen, weersomstandigheden en exacte positie. Formeel landschapsonderzoek volgt in MER.',
+        apparentHeight:  'schijnbare hoogte',
+        moonCompare:     'x volle maan',
         energyTitle:     '⚡ Energieopbrengst (per optie)',
         thMWh:           'MWh/jr',
         thHH:            'Huishoudens',
@@ -167,7 +169,9 @@ const I18N = {
         natureN2000:     'Natura 2000 (Noorderpark ~8 km)',
         natureNote:      'Mitigation via bat detectors, shutdown protocols and ecological research in EIA.',
         landscapeTitle:  '🌆 Landscape & visibility',
-        landscapeNote:   'Visual impact depends strongly on buildings, trees and exact position. Formal landscape assessment will follow in the EIA.',
+        landscapeNote:   'Apparent height is a simple geometric estimate based on tip height and distance. Actual visibility also depends strongly on buildings, trees, weather and the exact viewing position. Formal landscape assessment will follow in the EIA.',
+        apparentHeight:  'apparent height',
+        moonCompare:     'x full moon',
         energyTitle:     '⚡ Energy output (per alternative)',
         thMWh:           'MWh/yr',
         thHH:            'Households',
@@ -520,6 +524,11 @@ function nearestPointOnPolyline(lat, lon, polyline) {
     }
     const nearest = unprojectPoint(bestPoint.x, bestPoint.y, latRef, lonRef, xScale, yScale);
     return { ...nearest, dist: bestPoint.dist };
+}
+
+function apparentHeightDegrees(heightMetres, distanceMetres) {
+    const d = Math.max(distanceMetres, 1);
+    return 2 * Math.atan(heightMetres / (2 * d)) * 180 / Math.PI;
 }
 
 
@@ -1413,9 +1422,11 @@ function updateInfoPanel(lat, lon) {
     for (const [key, opt] of Object.entries(TURBINE_OPTIONS)) {
         if (!activeOptions[key]) continue;
         const nearestDist = Math.min(...opt.turbines.map(turbine => haversine(lat, lon, turbine.lat, turbine.lon)));
+        const apparentDeg = apparentHeightDegrees(opt.tip_height, nearestDist);
+        const moonMultiple = apparentDeg / 0.5;
         html += `<div class="effect-row">
             <span class="effect-label" style="color:${opt.color};font-weight:700">${key}</span>
-            <span class="effect-value">${Math.round(nearestDist / 100) / 10} km | ${opt.tip_height} m ${t('tipHeight').toLowerCase()}</span>
+            <span class="effect-value">${Math.round(nearestDist / 100) / 10} km | ${opt.tip_height} m ${t('tipHeight').toLowerCase()} | ~${apparentDeg.toFixed(1)}° ${t('apparentHeight')} (${moonMultiple.toFixed(1)} ${t('moonCompare')})</span>
         </div>`;
     }
     html += `<div style="font-size:10px;color:#95a5a6;margin-top:3px;">${t('landscapeNote')}</div>

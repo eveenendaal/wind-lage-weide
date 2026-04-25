@@ -247,7 +247,9 @@ function updateUrlState() {
     else url.searchParams.set('opts', activeOptionKeys.join(','));
 
     const activeLayerKeys = LAYER_KEYS.filter(key => document.getElementById(`toggle-${key}`).checked);
-    if (activeLayerKeys.length === 3 && !activeLayerKeys.includes('safety')) url.searchParams.delete('layers');
+    if (activeLayerKeys.length === 2 && activeLayerKeys.includes('turbines') && activeLayerKeys.includes('noise')) {
+        url.searchParams.delete('layers');
+    }
     else url.searchParams.set('layers', activeLayerKeys.join(','));
 
     if (lastClickedLatLon) {
@@ -853,7 +855,7 @@ if (URL_STATE.options !== null) {
 const turbineGroup = L.layerGroup().addTo(map);
 const noiseGroup   = L.layerGroup().addTo(map);
 const safetyGroup  = L.layerGroup();            // off by default
-const a2Group      = L.layerGroup().addTo(map);
+const a2Group      = L.layerGroup();            // off by default
 const selectionGroup = L.layerGroup().addTo(map);
 let clickMarker = null;
 let lastClickedLatLon = null;
@@ -890,7 +892,7 @@ function resetAppState() {
     document.getElementById('toggle-turbines').checked = true;
     document.getElementById('toggle-noise').checked = true;
     document.getElementById('toggle-safety').checked = false;
-    document.getElementById('toggle-a2').checked = true;
+    document.getElementById('toggle-a2').checked = false;
 
     if (clickMarker) {
         map.removeLayer(clickMarker);

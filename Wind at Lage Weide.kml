@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>Wind at Lage Weide - Professional Layout</name>
+  <open>1</open>
+
+  <Style id="styleA"><IconStyle><color>ff0000ff</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/paddle/A.png</href></Icon></IconStyle></Style>
+  <Style id="styleB"><IconStyle><color>ff00ff00</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/paddle/B.png</href></Icon></IconStyle></Style>
+  <Style id="styleC"><IconStyle><color>ffffff00</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/paddle/C.png</href></Icon></IconStyle></Style>
+  <Style id="styleD"><IconStyle><color>ffff0000</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/paddle/D.png</href></Icon></IconStyle></Style>
+
+  <Folder>
+    <name>Option A (8 Small Turbines)</name>
+    <Placemark><name>Turbine A-1</name><styleUrl>#styleA</styleUrl><Point><coordinates>5.054729,52.113352,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine A-2</name><styleUrl>#styleA</styleUrl><Point><coordinates>5.060361,52.118340,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine A-3</name><styleUrl>#styleA</styleUrl><Point><coordinates>5.062644,52.115997,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine A-4</name><styleUrl>#styleA</styleUrl><Point><coordinates>5.067392,52.113771,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine A-5</name><styleUrl>#styleA</styleUrl><Point><coordinates>5.071481,52.111787,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine A-6</name><styleUrl>#styleA</styleUrl><Point><coordinates>5.072524,52.110256,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine A-7</name><styleUrl>#styleA</styleUrl><Point><coordinates>5.073085,52.102285,0</coordinates></Point></Placemark>
+  </Folder>
+
+  <Folder>
+    <name>Option B (4 Medium Turbines)</name>
+    <Placemark><name>Turbine B-1</name><styleUrl>#styleB</styleUrl><Point><coordinates>5.054716,52.113444,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine B-2</name><styleUrl>#styleB</styleUrl><Point><coordinates>5.064054,52.115154,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine B-3</name><styleUrl>#styleB</styleUrl><Point><coordinates>5.066722,52.114012,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine B-4</name><styleUrl>#styleB</styleUrl><Point><coordinates>5.072561,52.110746,0</coordinates></Point></Placemark>
+  </Folder>
+
+  <Folder>
+    <name>Option C (4 Large Turbines)</name>
+    <Placemark><name>Turbine C-1</name><styleUrl>#styleC</styleUrl><Point><coordinates>5.054795,52.113708,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine C-2</name><styleUrl>#styleC</styleUrl><Point><coordinates>5.059780,52.118677,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine C-3</name><styleUrl>#styleC</styleUrl><Point><coordinates>5.067481,52.113994,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine C-4</name><styleUrl>#styleC</styleUrl><Point><coordinates>5.073054,52.111085,0</coordinates></Point></Placemark>
+  </Folder>
+
+  <Folder>
+    <name>Option D (2 Very Large Turbines)</name>
+    <Placemark><name>Turbine D-1</name><styleUrl>#styleD</styleUrl><Point><coordinates>5.064827,52.115436,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine D-2</name><styleUrl>#styleD</styleUrl><Point><coordinates>5.071231,52.111985,0</coordinates></Point></Placemark>
+  </Folder>
+</Document>
+</kml>

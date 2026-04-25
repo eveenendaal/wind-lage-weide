@@ -1,0 +1,237 @@
+/* ═══════════════════════════════════════════════════════
+   style.css – Windpark Lage Weide effect explorer
+   ═══════════════════════════════════════════════════════ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    background: #ecf0f1;
+}
+
+#map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+
+
+/* ── Left control panel ── */
+#controls {
+    position: absolute; top: 10px; left: 10px;
+    width: 260px; z-index: 1000;
+    background: rgba(255,255,255,0.97);
+    border-radius: 10px;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.35);
+    max-height: calc(100vh - 20px);
+    overflow-y: auto;
+}
+#ctrl-header {
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #1a5276, #2980b9);
+    color: white;
+    border-radius: 10px 10px 0 0;
+}
+#ctrl-header h1 { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+#ctrl-header p  { font-size: 11px; opacity: 0.88; line-height: 1.4; }
+
+.ctrl-section { padding: 10px 14px; border-bottom: 1px solid #e8e8e8; }
+.ctrl-section:last-child { border-bottom: none; }
+.ctrl-section h3 {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.5px; color: #7f8c8d; margin-bottom: 8px;
+}
+
+
+/* ── My Location button ── */
+#btn-my-location {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    width: 100%; padding: 9px 12px;
+    background: linear-gradient(135deg, #1e8449, #27ae60);
+    color: white; border: none; border-radius: 7px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 2px 6px rgba(39,174,96,0.35);
+    transition: opacity 0.15s, transform 0.1s;
+}
+#btn-my-location:hover  { opacity: 0.9; transform: translateY(-1px); }
+#btn-my-location:active { opacity: 1;   transform: translateY(0); }
+#btn-my-location .loc-icon { font-size: 16px; }
+
+
+/* ── Language toggle ── */
+#lang-toggle {
+    display: flex; align-items: center; justify-content: flex-end; gap: 5px;
+    padding: 6px 14px; border-bottom: 1px solid #e8e8e8;
+}
+.lang-btn {
+    padding: 3px 9px; border-radius: 12px; border: 1px solid #bdc3c7;
+    font-size: 11px; font-weight: 700; cursor: pointer;
+    background: transparent; color: #7f8c8d; transition: all 0.15s;
+}
+.lang-btn.active {
+    background: #2980b9; color: white; border-color: #2980b9;
+}
+
+
+/* ── Option toggle buttons ── */
+.option-btn {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 6px; cursor: pointer;
+    padding: 7px 10px; border-radius: 6px;
+    transition: background 0.15s;
+    border: 2px solid transparent;
+}
+.option-btn:hover { background: #f0f3f5; }
+.option-btn.active { border-color: currentColor; }
+.option-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    flex-shrink: 0; border: 2px solid rgba(0,0,0,0.15);
+}
+.option-label { font-size: 13px; font-weight: 600; flex: 1; }
+.option-sub   { font-size: 10px; color: #95a5a6; }
+.option-check { font-size: 14px; }
+
+
+/* ── Layer toggles ── */
+.layer-toggle {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 5px; cursor: pointer; font-size: 12px;
+}
+.layer-toggle input { width: 14px; height: 14px; cursor: pointer; }
+
+
+/* ── Right info panel ── */
+#info-panel {
+    position: absolute; top: 10px; right: 10px;
+    width: 340px; z-index: 1000;
+    background: rgba(255,255,255,0.97);
+    border-radius: 10px;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.35);
+    max-height: calc(100vh - 20px);
+    overflow-y: auto;
+    transition: opacity 0.2s;
+}
+#info-header {
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #145a32, #1e8449);
+    color: white;
+    border-radius: 10px 10px 0 0;
+}
+#info-header h2 { font-size: 14px; font-weight: 700; }
+#info-header p  { font-size: 11px; opacity: 0.88; }
+#info-body { padding: 0; }
+
+.info-section { padding: 10px 14px; border-bottom: 1px solid #e8e8e8; }
+.info-section:last-child { border-bottom: none; }
+.info-section h4 { font-size: 12px; font-weight: 700; color: #2c3e50; margin-bottom: 8px; }
+
+
+/* ── Noise table ── */
+.noise-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.noise-table th {
+    padding: 5px 6px; text-align: left;
+    background: #f5f6fa; font-weight: 600; color: #555;
+    border-bottom: 1px solid #ddd;
+}
+.noise-table td {
+    padding: 5px 6px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+.noise-table tr:last-child td { border-bottom: none; }
+.noise-table tr.inactive td { opacity: 0.35; }
+
+
+/* ── Noise badges ── */
+.badge {
+    display: inline-block; padding: 2px 7px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; color: white;
+}
+.badge-green  { background: #27ae60; }
+.badge-yellow { background: #f1c40f; color: #333; }
+.badge-orange { background: #e67e22; }
+.badge-red    { background: #e74c3c; }
+.badge-grey   { background: #95a5a6; }
+.badge-blue   { background: #2980b9; }
+
+
+/* ── Value cells ── */
+.val-green  { color: #27ae60; font-weight: 700; }
+.val-yellow { color: #e67e22; font-weight: 700; }
+.val-orange { color: #e67e22; font-weight: 700; }
+.val-red    { color: #e74c3c; font-weight: 700; }
+
+
+/* ── Effect rows ── */
+.effect-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 6px; font-size: 11px;
+}
+.effect-label { color: #555; flex: 1; }
+.effect-value { font-weight: 600; text-align: right; flex: 1; }
+
+
+/* ── Shadow & safety items ── */
+.shadow-row { margin-bottom: 5px; font-size: 11px; }
+.shadow-opt {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 3px;
+}
+.shadow-bar { height: 6px; border-radius: 3px; margin-top: 2px; }
+
+
+/* ── Placeholder ── */
+#info-placeholder {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 40px 20px; text-align: center;
+}
+#info-placeholder .icon { font-size: 40px; margin-bottom: 12px; }
+#info-placeholder p     { font-size: 12px; color: #7f8c8d; line-height: 1.5; }
+
+
+/* ── Legend at bottom-left ── */
+#legend {
+    position: absolute; bottom: 10px; left: 10px; z-index: 1000;
+    background: rgba(255,255,255,0.95); border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25); padding: 8px 12px;
+    font-size: 11px;
+}
+#legend h4 {
+    font-size: 11px; color: #555; margin-bottom: 5px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.legend-row { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+.legend-swatch { width: 24px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+
+/* ── Tooltip ── */
+.leaflet-tooltip { font-size: 11px; }
+
+
+/* ── Divider in info panel ── */
+.info-divider { height: 1px; background: #e0e0e0; margin: 6px 0; }
+
+
+/* ══════════════════════════════════════════
+   Responsive / mobile styles
+   ══════════════════════════════════════════ */
+
+/* Tablet: two narrower panels side by side */
+@media (max-width: 700px) {
+    #controls   { width: calc(50vw - 14px); }
+    #info-panel { width: calc(50vw - 14px); }
+}
+
+/* Phone: stack controls on top, info below */
+@media (max-width: 480px) {
+    #controls {
+        top: 5px; left: 5px;
+        width: calc(100vw - 10px);
+        position: fixed;
+        max-height: 220px;
+    }
+    #info-panel {
+        top: 230px; right: 5px; left: 5px;
+        width: auto;
+        max-height: calc(100vh - 240px);
+    }
+    #legend { display: none; }
+    /* On mobile the "My Location" button IS the primary CTA – make it taller */
+    #btn-my-location { padding: 12px; font-size: 14px; }
+}

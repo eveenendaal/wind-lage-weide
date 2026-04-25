@@ -21,10 +21,11 @@ const I18N = {
     nl: {
         title:           '🌬️ Windpark Lage Weide',
         subtitle:        'Klik op de kaart voor effecten op die locatie',
-        myLocation:      '📍 Mijn locatie',
-        locating:        '⏳ Locatie bepalen…',
+        myLocation:      'Mijn locatie',
+        locating:        'Locatie bepalen…',
         locError:        '❌ Locatie niet beschikbaar',
         alternatives:    'Alternatieven',
+        reset:           'Reset',
         mapLayers:       'Kaartlagen',
         layerTurbines:   'Windturbines',
         layerNoise:      'Geluidscontouren (47 dB)',
@@ -46,8 +47,8 @@ const I18N = {
         // Info panel sections
         locContext:      '📍 Locatiecontext',
         distToA2:        'Afstand tot A2',
-        a2NoiseLabel:    'A2 geluid (Lden, ongeschermd)',
-        a2Note:          'De A2 is één van de voornaamste bestaande geluidsbronnen in het gebied. De geluidsnorm voor windturbines (45 dB Lden) is lager dan typische wegverkeernormen.',
+        a2NoiseLabel:    'A2 geluid (Lden, gecorrigeerd)',
+        a2Note:          'De A2 is een belangrijke bestaande geluidsbron in het gebied. Deze schatting start bij een referentie van 68 dB Lden op 100 m voor open, ongeschermde snelweg en corrigeert vervolgens voor stiller asfalt (tweelaags ZOAB-fijn) op het traject Oudenrijn-Leidsche Rijntunnel. Het overkapte tunneldeel is niet als open geluidsbron meegerekend.',
         noiseTitle:      '🔊 Geluid – vergelijking (Lden)',
         thOption:        'Optie',
         thWind:          'Wind',
@@ -100,7 +101,7 @@ const I18N = {
         assessNeededShort: 'Beoordeling nodig',
 
         // A2 tooltip
-        a2Tooltip:       'A2 Snelweg (rijkswegen geluid ~68 dB Lden op 100m)',
+        a2Tooltip:       'A2 snelweg (68 dB Lden @100 m ongeschermd; stiller asfalt/tunnel verwerkt)',
         // Turbine tooltip parts
         tipHeight:       'Tiphoogte',
         safetyZone:      'veiligheidszone',
@@ -111,10 +112,11 @@ const I18N = {
     en: {
         title:           '🌬️ Windpark Lage Weide',
         subtitle:        'Click on the map to see effects at that location',
-        myLocation:      '📍 My location',
-        locating:        '⏳ Locating…',
+        myLocation:      'My location',
+        locating:        'Locating…',
         locError:        '❌ Location unavailable',
         alternatives:    'Alternatives',
+        reset:           'Reset',
         mapLayers:       'Map layers',
         layerTurbines:   'Wind turbines',
         layerNoise:      'Noise contours (47 dB)',
@@ -135,8 +137,8 @@ const I18N = {
 
         locContext:      '📍 Location context',
         distToA2:        'Distance to A2',
-        a2NoiseLabel:    'A2 noise (Lden, unshielded)',
-        a2Note:          'The A2 motorway is one of the main existing noise sources in the area. The wind turbine noise standard (45 dB Lden) is stricter than typical road traffic standards.',
+        a2NoiseLabel:    'A2 noise (Lden, adjusted)',
+        a2Note:          'The A2 motorway is a major existing noise source in the area. This estimate starts from a 68 dB Lden at 100 m reference for open, unshielded motorway traffic and then adjusts for quieter asphalt (double-layer porous asphalt) on the Oudenrijn-Leidsche Rijntunnel section. The covered tunnel section is excluded as an open noise source.',
         noiseTitle:      '🔊 Noise – comparison (Lden)',
         thOption:        'Option',
         thWind:          'Wind',
@@ -187,7 +189,7 @@ const I18N = {
         risk:            'Risk',
         assessNeededShort: 'Assessment needed',
 
-        a2Tooltip:       'A2 Motorway (road noise ~68 dB Lden at 100 m)',
+        a2Tooltip:       'A2 motorway (68 dB Lden @100 m unshielded; quiet asphalt/tunnel adjusted)',
         tipHeight:       'Tip height',
         safetyZone:      'safety zone',
         visLabel:        'km | tip height',
@@ -199,6 +201,63 @@ let LANG = 'nl';
 
 /** Convenience accessor: returns the translated string for key `k`. */
 function t(k) { return I18N[LANG][k]; }
+
+function parseCsvParam(value, validKeys) {
+    if (value === null) return null;
+    if (value.trim() === '') return [];
+    return value
+        .split(',')
+        .map(item => item.trim())
+        .filter(item => validKeys.includes(item));
+}
+
+function parseLatLonParam(value) {
+    if (!value) return null;
+    const [latRaw, lonRaw] = value.split(',');
+    const lat = Number(latRaw);
+    const lon = Number(lonRaw);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+    return { lat, lon };
+}
+
+function parseUrlState() {
+    const params = new URLSearchParams(window.location.search);
+    const lang = params.get('lang') === 'en' ? 'en' : 'nl';
+    const options = parseCsvParam(params.get('opts'), OPTION_KEYS);
+    const layers = parseCsvParam(params.get('layers'), LAYER_KEYS);
+    return {
+        lang,
+        options,
+        layers,
+        point: parseLatLonParam(params.get('point'))
+    };
+}
+
+function updateUrlState() {
+    const url = new URL(window.location.href);
+    url.searchParams.set('lang', LANG);
+
+    const activeOptionKeys = OPTION_KEYS.filter(key => activeOptions[key]);
+    if (activeOptionKeys.length === OPTION_KEYS.length) url.searchParams.delete('opts');
+    else url.searchParams.set('opts', activeOptionKeys.join(','));
+
+    const activeLayerKeys = LAYER_KEYS.filter(key => document.getElementById(`toggle-${key}`).checked);
+    if (activeLayerKeys.length === 3 && !activeLayerKeys.includes('safety')) url.searchParams.delete('layers');
+    else url.searchParams.set('layers', activeLayerKeys.join(','));
+
+    if (lastClickedLatLon) {
+        url.searchParams.set('point', `${lastClickedLatLon.lat.toFixed(5)},${lastClickedLatLon.lon.toFixed(5)}`);
+    } else {
+        url.searchParams.delete('point');
+    }
+
+    window.history.replaceState({}, '', url);
+}
+
+function clearUrlState() {
+    window.history.replaceState({}, '', window.location.pathname);
+}
 
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -288,15 +347,68 @@ const TURBINE_OPTIONS = {
  * Coordinates are [latitude, longitude].
  */
 const A2_PATH = [
-    [52.1092, 5.033],
-    [52.1082, 5.042],
-    [52.1072, 5.051],
-    [52.1060, 5.061],
-    [52.1047, 5.070],
-    [52.1035, 5.079],
-    [52.1021, 5.089],
-    [52.1010, 5.099]
+    [52.1267745, 5.0178842],
+    [52.1261695, 5.0189484],
+    [52.1257022, 5.0197593],
+    [52.1249890, 5.0209714],
+    [52.1242059, 5.0222918],
+    [52.1237171, 5.0230966],
+    [52.1232842, 5.0238101],
+    [52.1231312, 5.0227356],
+    [52.1227629, 5.0232778],
+    [52.1224657, 5.0237443],
+    [52.1223120, 5.0239849],
+    [52.1219798, 5.0248984],
+    [52.1215893, 5.0255503],
+    [52.1208121, 5.0268422],
+    [52.1202118, 5.0279014],
+    [52.1197617, 5.0287428],
+    [52.1193192, 5.0296269],
+    [52.1188364, 5.0306862],
+    [52.1184917, 5.0315104],
+    [52.1177451, 5.0361941],
+    [52.1174029, 5.0366889],
+    [52.1171414, 5.0369848],
+    [52.1168013, 5.0374008],
+    [52.1164920, 5.0379047],
+    [52.1162872, 5.0383256],
+    [52.1158834, 5.0390547],
+    [52.1141200, 5.0434360],
+    [52.1127986, 5.0467157],
+    [52.1118000, 5.0494000],
+    [52.1108000, 5.0518000],
+    [52.1092000, 5.0551000],
+    [52.1062177, 5.0588452],
+    [52.1053215, 5.0601373],
+    [52.1044702, 5.0612792],
+    [52.1032854, 5.0627603],
+    [52.1020403, 5.0641423],
+    [52.1005322, 5.0656710],
+    [52.0990365, 5.0670418],
+    [52.0976367, 5.0678670],
+    [52.0972132, 5.0681803],
+    [52.0960297, 5.0690787],
+    [52.0956104, 5.0694091],
+    [52.0945932, 5.0702106],
+    [52.0944796, 5.0702956],
+    [52.0929115, 5.0714680],
+    [52.0909032, 5.0728984],
+    [52.0892046, 5.0738900],
+    [52.0878250, 5.0745501],
+    [52.0863506, 5.0750535],
+    [52.0854210, 5.0752145]
 ];
+
+// Northern covered section (Leidsche Rijntunnel) is drawn on the map but excluded
+// from the open-air line-source noise model.
+const A2_NOISE_PATH = A2_PATH.slice(7);
+const A2_UNSHIELDED_REF_LDEN = 68;
+const A2_QUIET_ASPHALT_REDUCTION_DB = 4;
+
+const LAYER_KEYS = ['turbines', 'noise', 'safety', 'a2'];
+const OPTION_KEYS = Object.keys(TURBINE_OPTIONS);
+const URL_STATE = parseUrlState();
+LANG = URL_STATE.lang;
 
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -332,6 +444,24 @@ function haversine(lat1, lon1, lat2, lon2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function projectLatLon(lat, lon, latRef, lonRef) {
+    const xScale = Math.cos(latRef * Math.PI / 180) * 6371000 * Math.PI / 180;
+    const yScale = 6371000 * Math.PI / 180;
+    return {
+        x: (lon - lonRef) * xScale,
+        y: (lat - latRef) * yScale,
+        xScale,
+        yScale
+    };
+}
+
+function unprojectPoint(x, y, latRef, lonRef, xScale, yScale) {
+    return {
+        lat: latRef + y / yScale,
+        lon: lonRef + x / xScale
+    };
+}
+
 /**
  * Shortest distance from point P=(px,py) to segment A=(ax,ay)–B=(bx,by),
  * all in the same 2-D coordinate system (e.g. local metres).
@@ -349,6 +479,19 @@ function distToSegment(px, py, ax, ay, bx, by) {
     return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
+function closestPointOnSegment(px, py, ax, ay, bx, by) {
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) {
+        return { x: ax, y: ay, dist: Math.hypot(px - ax, py - ay) };
+    }
+    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+    const x = ax + t * dx;
+    const y = ay + t * dy;
+    return { x, y, dist: Math.hypot(px - x, py - y) };
+}
+
 /**
  * Shortest distance from a lat/lon point to a polyline (array of [lat, lon]).
  *
@@ -362,21 +505,21 @@ function distToSegment(px, py, ax, ay, bx, by) {
  * @returns {number} distance [metres]
  */
 function distToPolyline(lat, lon, polyline) {
+    return nearestPointOnPolyline(lat, lon, polyline).dist;
+}
+
+function nearestPointOnPolyline(lat, lon, polyline) {
     const latRef = polyline[0][0], lonRef = polyline[0][1];
-    // Metres per degree of longitude shrinks with latitude (cosine factor)
-    const xScale = Math.cos(latRef * Math.PI / 180) * 6371000 * Math.PI / 180;
-    const yScale = 6371000 * Math.PI / 180;                  // metres per degree latitude
-    const px = (lon - lonRef) * xScale;
-    const py = (lat - latRef) * yScale;
-    let minDist = Infinity;
+    const { x: px, y: py, xScale, yScale } = projectLatLon(lat, lon, latRef, lonRef);
+    let bestPoint = null;
     for (let i = 0; i < polyline.length - 1; i++) {
-        const ax = (polyline[i][1]     - lonRef) * xScale;
-        const ay = (polyline[i][0]     - latRef) * yScale;
-        const bx = (polyline[i + 1][1] - lonRef) * xScale;
-        const by = (polyline[i + 1][0] - latRef) * yScale;
-        minDist = Math.min(minDist, distToSegment(px, py, ax, ay, bx, by));
+        const { x: ax, y: ay } = projectLatLon(polyline[i][0], polyline[i][1], latRef, lonRef);
+        const { x: bx, y: by } = projectLatLon(polyline[i + 1][0], polyline[i + 1][1], latRef, lonRef);
+        const candidate = closestPointOnSegment(px, py, ax, ay, bx, by);
+        if (!bestPoint || candidate.dist < bestPoint.dist) bestPoint = candidate;
     }
-    return minDist;
+    const nearest = unprojectPoint(bestPoint.x, bestPoint.y, latRef, lonRef, xScale, yScale);
+    return { ...nearest, dist: bestPoint.dist };
 }
 
 
@@ -406,12 +549,17 @@ function distToPolyline(lat, lon, polyline) {
      • Minimum distance capped at 50 m (near-field not valid for this formula)
      • All turbines in an option treated as identical sources
 
-   LINE-SOURCE MODEL (A2 motorway):
-     Lden ≈ 68 − 10·log₁₀(d/100)
+   LINE-SOURCE MODEL (A2 motorway, mitigation-adjusted):
+     Lden ≈ 68 − 4 − 10·log₁₀(d/100)
 
    Derivation:
      • 68 dB at 100 m is the reference level for the A2 near Utrecht
-       (RIVM/RWS monitoring data, unshielded).
+       in open, unshielded conditions.
+     • −4 dB corrects the open-road reference for quieter asphalt
+       (tweelaags ZOAB-fijn / double-layer porous asphalt) used on the
+       Oudenrijn–Leidsche Rijntunnel corridor.
+     • The covered Leidsche Rijntunnel section is excluded from the
+       open-air line-source calculation.
      • 10·log₁₀(d/100) = cylindrical spreading loss
        (3 dB per doubling of distance for an infinite line source).
 
@@ -464,7 +612,7 @@ function calcOptionNoise(lat, lon, optKey) {
 /**
  * Lden from the A2 motorway at a given point.
  *
- * Lden ≈ 68 − 10·log₁₀(d/100)
+ * Lden ≈ 68 − 4 − 10·log₁₀(d/100)
  *
  * Minimum distance capped at 25 m (observer cannot be on the road).
  *
@@ -473,8 +621,8 @@ function calcOptionNoise(lat, lon, optKey) {
  * @returns {number} A2 Lden [dB]
  */
 function calcA2Noise(lat, lon) {
-    const d = Math.max(distToPolyline(lat, lon, A2_PATH), 25);
-    return 68 - 10 * Math.log10(d / 100);
+    const d = Math.max(distToPolyline(lat, lon, A2_NOISE_PATH), 25);
+    return A2_UNSHIELDED_REF_LDEN - A2_QUIET_ASPHALT_REDUCTION_DB - 10 * Math.log10(d / 100);
 }
 
 /**
@@ -672,9 +820,12 @@ function safetyClass(dist, tipHeight) {
    SECTION 8 – MAP INITIALISATION
    ═══════════════════════════════════════════════════════════════════════ */
 
+const DEFAULT_MAP_CENTER = [52.1125, 5.0645];
+const DEFAULT_MAP_ZOOM = 13;
+
 const map = L.map('map', {
-    center: [52.1125, 5.0645],
-    zoom: 13,
+    center: DEFAULT_MAP_CENTER,
+    zoom: DEFAULT_MAP_ZOOM,
     zoomControl: true
 });
 
@@ -685,13 +836,67 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 // Track which alternatives are currently shown
 const activeOptions = { A: true, B: true, C: true, D: true };
+if (URL_STATE.options !== null) {
+    for (const key of OPTION_KEYS) activeOptions[key] = URL_STATE.options.includes(key);
+}
 
 // Map layer-group references
 const turbineGroup = L.layerGroup().addTo(map);
 const noiseGroup   = L.layerGroup().addTo(map);
 const safetyGroup  = L.layerGroup();            // off by default
 const a2Group      = L.layerGroup().addTo(map);
+const selectionGroup = L.layerGroup().addTo(map);
 let clickMarker = null;
+let lastClickedLatLon = null;
+
+function syncLayerVisibility() {
+    document.getElementById('toggle-turbines').checked ? turbineGroup.addTo(map) : map.removeLayer(turbineGroup);
+    document.getElementById('toggle-noise').checked ? noiseGroup.addTo(map) : map.removeLayer(noiseGroup);
+    document.getElementById('toggle-safety').checked ? safetyGroup.addTo(map) : map.removeLayer(safetyGroup);
+    document.getElementById('toggle-a2').checked ? a2Group.addTo(map) : map.removeLayer(a2Group);
+}
+
+function applyInitialUrlState() {
+    if (URL_STATE.layers !== null) {
+        for (const key of LAYER_KEYS) {
+            document.getElementById(`toggle-${key}`).checked = URL_STATE.layers.includes(key);
+        }
+    }
+    syncLayerVisibility();
+
+    if (URL_STATE.point) {
+        map.setView([URL_STATE.point.lat, URL_STATE.point.lon], Math.max(map.getZoom(), 14));
+        placeClickMarker(URL_STATE.point.lat, URL_STATE.point.lon);
+        updateInfoPanel(URL_STATE.point.lat, URL_STATE.point.lon);
+    } else {
+        updateUrlState();
+    }
+}
+
+function resetAppState() {
+    LANG = 'nl';
+
+    for (const key of OPTION_KEYS) activeOptions[key] = true;
+
+    document.getElementById('toggle-turbines').checked = true;
+    document.getElementById('toggle-noise').checked = true;
+    document.getElementById('toggle-safety').checked = false;
+    document.getElementById('toggle-a2').checked = true;
+
+    if (clickMarker) {
+        map.removeLayer(clickMarker);
+        clickMarker = null;
+    }
+
+    lastClickedLatLon = null;
+    selectionGroup.clearLayers();
+    syncLayerVisibility();
+    buildControls();
+    redrawAll();
+    showPlaceholder();
+    map.setView(DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM);
+    clearUrlState();
+}
 
 
 /* ── Draw A2 motorway polyline ── */
@@ -792,13 +997,60 @@ function drawSafetyZones() {
     }
 }
 
+function drawSelectionLines() {
+    selectionGroup.clearLayers();
+    if (!lastClickedLatLon) return;
+
+    const selected = [lastClickedLatLon.lat, lastClickedLatLon.lon];
+
+    for (const [key, opt] of Object.entries(TURBINE_OPTIONS)) {
+        if (!activeOptions[key]) continue;
+
+        let nearestTurbine = null;
+        let nearestDist = Infinity;
+        for (const turbine of opt.turbines) {
+            const dist = haversine(lastClickedLatLon.lat, lastClickedLatLon.lon, turbine.lat, turbine.lon);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestTurbine = turbine;
+            }
+        }
+
+        if (!nearestTurbine) continue;
+
+        const name = LANG === 'nl' ? opt.nameNl : opt.nameEn;
+        L.polyline([selected, [nearestTurbine.lat, nearestTurbine.lon]], {
+            color: opt.color,
+            weight: 2.5,
+            opacity: 0.85,
+            dashArray: '6 6'
+        }).addTo(selectionGroup)
+          .bindTooltip(`${name}: ${Math.round(nearestDist)} m`, { sticky: true });
+    }
+
+    const nearestA2 = nearestPointOnPolyline(lastClickedLatLon.lat, lastClickedLatLon.lon, A2_PATH);
+    L.polyline([selected, [nearestA2.lat, nearestA2.lon]], {
+        color: '#e74c3c',
+        weight: 3,
+        opacity: 0.85,
+        dashArray: '4 6'
+    }).addTo(selectionGroup)
+      .bindTooltip(`${t('distToA2')}: ${Math.round(nearestA2.dist)} m`, { sticky: true });
+}
+
 function redrawAll() {
     drawTurbines();
     drawNoiseContours();
     drawSafetyZones();
     drawA2(); // re-draw to pick up translated tooltip
+    drawSelectionLines();
 }
 redrawAll();
+
+function refreshCurrentReport() {
+    if (lastClickedLatLon) updateInfoPanel(lastClickedLatLon.lat, lastClickedLatLon.lon);
+    else showPlaceholder();
+}
 
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -811,6 +1063,9 @@ redrawAll();
  */
 function buildControls() {
     // Update static text in the left panel
+    document.getElementById('btn-nl').classList.toggle('active', LANG === 'nl');
+    document.getElementById('btn-en').classList.toggle('active', LANG === 'en');
+    document.getElementById('btn-reset').textContent = t('reset');
     document.getElementById('ctrl-title').textContent    = t('title');
     document.getElementById('ctrl-subtitle').textContent = t('subtitle');
     document.getElementById('ctrl-alts-h3').textContent  = t('alternatives');
@@ -856,6 +1111,8 @@ function buildControls() {
             activeOptions[key] = !activeOptions[key];
             buildControls();
             redrawAll();
+            refreshCurrentReport();
+            updateUrlState();
         });
         container.appendChild(btn);
 
@@ -867,20 +1124,29 @@ function buildControls() {
     }
 }
 buildControls();
+document.getElementById('btn-reset').addEventListener('click', resetAppState);
 
 
 /* ── Layer checkbox listeners ── */
 document.getElementById('toggle-turbines').addEventListener('change', e => {
-    e.target.checked ? turbineGroup.addTo(map) : map.removeLayer(turbineGroup);
+    syncLayerVisibility();
+    refreshCurrentReport();
+    updateUrlState();
 });
 document.getElementById('toggle-noise').addEventListener('change', e => {
-    e.target.checked ? noiseGroup.addTo(map) : map.removeLayer(noiseGroup);
+    syncLayerVisibility();
+    refreshCurrentReport();
+    updateUrlState();
 });
 document.getElementById('toggle-safety').addEventListener('change', e => {
-    e.target.checked ? safetyGroup.addTo(map) : map.removeLayer(safetyGroup);
+    syncLayerVisibility();
+    refreshCurrentReport();
+    updateUrlState();
 });
 document.getElementById('toggle-a2').addEventListener('change', e => {
-    e.target.checked ? a2Group.addTo(map) : map.removeLayer(a2Group);
+    syncLayerVisibility();
+    refreshCurrentReport();
+    updateUrlState();
 });
 
 
@@ -897,18 +1163,14 @@ function setLang(lang) {
     document.getElementById('btn-en').classList.toggle('active', lang === 'en');
     buildControls();
     redrawAll();
-    // Re-render the info panel if a location has already been clicked
-    if (lastClickedLatLon) updateInfoPanel(lastClickedLatLon.lat, lastClickedLatLon.lon);
-    else showPlaceholder();
+    refreshCurrentReport();
+    updateUrlState();
 }
 
 
 /* ═══════════════════════════════════════════════════════════════════════
    SECTION 11 – MY LOCATION
    ═══════════════════════════════════════════════════════════════════════ */
-
-/** Last location clicked/found – used to re-render when language changes. */
-let lastClickedLatLon = null;
 
 document.getElementById('btn-my-location').addEventListener('click', () => {
     if (!navigator.geolocation) {
@@ -961,6 +1223,8 @@ function placeClickMarker(lat, lon) {
         })
     }).addTo(map);
     lastClickedLatLon = { lat, lon };
+    drawSelectionLines();
+    updateUrlState();
 }
 
 
@@ -969,6 +1233,7 @@ function placeClickMarker(lat, lon) {
    ═══════════════════════════════════════════════════════════════════════ */
 
 function showPlaceholder() {
+    document.body.classList.remove('has-selection');
     document.getElementById('info-header-title').textContent = t('infoTitle');
     document.getElementById('info-coords').textContent       = t('clickPrompt');
     document.getElementById('info-body').innerHTML = `
@@ -987,6 +1252,7 @@ showPlaceholder();
  * @param {number} lon – observer longitude [degrees]
  */
 function updateInfoPanel(lat, lon) {
+    document.body.classList.add('has-selection');
     document.getElementById('info-header-title').textContent = t('infoTitle');
     document.getElementById('info-coords').textContent =
         `${lat.toFixed(5)}°N, ${lon.toFixed(5)}°${LANG === 'nl' ? 'O' : 'E'}`;
@@ -1189,3 +1455,5 @@ function updateInfoPanel(lat, lon) {
 
     document.getElementById('info-body').innerHTML = html;
 }
+
+applyInitialUrlState();

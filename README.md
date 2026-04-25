@@ -12,6 +12,10 @@ GitHub Pages site with an interactive map and effect calculations for the propos
 
 [https://eveenendaal.github.io/wind-lage-weide/](https://eveenendaal.github.io/wind-lage-weide/)
 
+## License
+
+[MIT](LICENSE)
+
 ---
 
 ## English
@@ -53,12 +57,12 @@ They are **not** a substitute for the formal Environmental Impact Assessment (ME
 Lp = LwA − 20·log₁₀(d) − 8    [dB Lden]
 ```
 
-| Symbol | Meaning |
-|--------|---------|
-| `LwA`  | A-weighted sound power level of one turbine [dB(A)] |
-| `d`    | Distance from turbine to receiver [m] (clamped to ≥ 50 m) |
-| `20·log₁₀(d)` | Spherical (geometric) spreading loss: 6 dB per distance doubling |
-| `−8`   | Combined correction for directivity, ground reflection and long-term meteorological average (standard value per Dutch RMW 2011) |
+| Symbol        | Meaning                                                                                                                         |
+|---------------|---------------------------------------------------------------------------------------------------------------------------------|
+| `LwA`         | A-weighted sound power level of one turbine [dB(A)]                                                                             |
+| `d`           | Distance from turbine to receiver [m] (clamped to ≥ 50 m)                                                                       |
+| `20·log₁₀(d)` | Spherical (geometric) spreading loss: 6 dB per distance doubling                                                                |
+| `−8`          | Combined correction for directivity, ground reflection and long-term meteorological average (standard value per Dutch RMW 2011) |
 
 When multiple turbines are active, their contributions are summed using **energy addition**:
 ```
@@ -81,10 +85,10 @@ Lden ≈ 68 − 10·log₁₀(d / 100)    [dB]
 h ≈ 400 × (D / d)²    [hours/year]
 ```
 
-| Symbol | Meaning |
-|--------|---------|
-| `D`    | Rotor diameter [m] |
-| `d`    | Horizontal distance from turbine to receiver [m] |
+| Symbol | Meaning                                                                               |
+|--------|---------------------------------------------------------------------------------------|
+| `D`    | Rotor diameter [m]                                                                    |
+| `d`    | Horizontal distance from turbine to receiver [m]                                      |
 | `400`  | Empirical coefficient for the Netherlands (sun angle statistics, average cloud cover) |
 
 - Result is the **worst-case turbine** (nearest) in the alternative
@@ -93,10 +97,10 @@ h ≈ 400 × (D / d)²    [hours/year]
 
 #### 4. External safety thresholds
 
-| Distance vs. tip height | Status |
-|-------------------------|--------|
-| > 2× tip height         | Outside primary zone |
-| 1–2× tip height         | Risk assessment recommended |
+| Distance vs. tip height | Status                                          |
+|-------------------------|-------------------------------------------------|
+| > 2× tip height         | Outside primary zone                            |
+| 1–2× tip height         | Risk assessment recommended                     |
 | < 1× tip height         | Inside safety zone – formal assessment required |
 
 Reference: *Handboek Risicozonering Windturbines* (2020).
@@ -109,11 +113,11 @@ HH   = E × 1,000 / 3,500    [households]
 CO₂  = E × 0.4              [tonnes CO₂/year]
 ```
 
-| Parameter | Value | Source |
-|-----------|-------|--------|
-| FLH | 2,200 h/yr | Typical inland Netherlands (Windstats NL) |
-| Household use | 3,500 kWh/yr | CBS 2023 |
-| Grid emission factor | 0.4 kg CO₂/kWh | IEA 2023 |
+| Parameter            | Value          | Source                                    |
+|----------------------|----------------|-------------------------------------------|
+| FLH                  | 2,200 h/yr     | Typical inland Netherlands (Windstats NL) |
+| Household use        | 3,500 kWh/yr   | CBS 2023                                  |
+| Grid emission factor | 0.4 kg CO₂/kWh | IEA 2023                                  |
 
 ### Data sources
 
@@ -162,12 +166,12 @@ Ze zijn **geen** vervanging voor het formele MER-onderzoek.
 Lp = LwA − 20·log₁₀(d) − 8    [dB Lden]
 ```
 
-| Symbool | Betekenis |
-|---------|-----------|
-| `LwA`   | A-gewogen geluidsvermogensniveau van één turbine [dB(A)] |
-| `d`     | Afstand van turbine tot ontvanger [m] (minimaal 50 m) |
-| `20·log₁₀(d)` | Bolvormige spreidingsverzwakking: 6 dB per afstandsverdubbeling |
-| `−8`    | Gecombineerde correctie voor directiviteit, bodemreflectie en langjarig meteorologisch gemiddelde (standaardwaarde conform RMW 2011) |
+| Symbool       | Betekenis                                                                                                                            |
+|---------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| `LwA`         | A-gewogen geluidsvermogensniveau van één turbine [dB(A)]                                                                             |
+| `d`           | Afstand van turbine tot ontvanger [m] (minimaal 50 m)                                                                                |
+| `20·log₁₀(d)` | Bolvormige spreidingsverzwakking: 6 dB per afstandsverdubbeling                                                                      |
+| `−8`          | Gecombineerde correctie voor directiviteit, bodemreflectie en langjarig meteorologisch gemiddelde (standaardwaarde conform RMW 2011) |
 
 Bij meerdere turbines wordt de bijdrage opgeteld via **energieverdubbeling**:
 ```
@@ -190,10 +194,10 @@ Lden ≈ 68 − 10·log₁₀(d / 100)    [dB]
 h ≈ 400 × (D / d)²    [uur/jaar]
 ```
 
-| Symbool | Betekenis |
-|---------|-----------|
-| `D`     | Rotordiameter [m] |
-| `d`     | Horizontale afstand van turbine tot ontvanger [m] |
+| Symbool | Betekenis                                                                       |
+|---------|---------------------------------------------------------------------------------|
+| `D`     | Rotordiameter [m]                                                               |
+| `d`     | Horizontale afstand van turbine tot ontvanger [m]                               |
 | `400`   | Empirische coëfficiënt voor Nederland (zonhoekstatistiek, gemiddelde bewolking) |
 
 - Resultaat geldt voor de **worst-case turbine** (dichtste) in het alternatief
@@ -202,10 +206,10 @@ h ≈ 400 × (D / d)²    [uur/jaar]
 
 #### 4. Veiligheidszone (extern risico)
 
-| Afstand t.o.v. tiphoogte | Status |
-|--------------------------|--------|
-| > 2× tiphoogte           | Buiten primaire zone |
-| 1–2× tiphoogte           | Risicobeoordeling aanbevolen |
+| Afstand t.o.v. tiphoogte | Status                                               |
+|--------------------------|------------------------------------------------------|
+| > 2× tiphoogte           | Buiten primaire zone                                 |
+| 1–2× tiphoogte           | Risicobeoordeling aanbevolen                         |
 | < 1× tiphoogte           | Binnen veiligheidszone – formele beoordeling vereist |
 
 Referentie: *Handboek Risicozonering Windturbines* (2020).
@@ -218,11 +222,11 @@ HH   = E × 1.000 / 3.500    [huishoudens]
 CO₂  = E × 0,4              [ton CO₂/jaar]
 ```
 
-| Parameter | Waarde | Bron |
-|-----------|--------|------|
-| VLU (vollasturen) | 2.200 uur/jaar | Typisch binnenland NL (Windstats NL) |
-| Huishoudverbruik | 3.500 kWh/jaar | CBS 2023 |
-| CO₂-emissiefactor elektriciteitsnet | 0,4 kg CO₂/kWh | IEA 2023 |
+| Parameter                           | Waarde         | Bron                                 |
+|-------------------------------------|----------------|--------------------------------------|
+| VLU (vollasturen)                   | 2.200 uur/jaar | Typisch binnenland NL (Windstats NL) |
+| Huishoudverbruik                    | 3.500 kWh/jaar | CBS 2023                             |
+| CO₂-emissiefactor elektriciteitsnet | 0,4 kg CO₂/kWh | IEA 2023                             |
 
 ### Gegevensbronnen
 

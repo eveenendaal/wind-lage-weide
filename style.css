@@ -59,6 +59,22 @@ body {
     display: flex; align-items: center; justify-content: flex-end; gap: 5px;
     padding: 6px 14px; border-bottom: 1px solid #e8e8e8;
 }
+.reset-btn {
+    margin-right: auto;
+    padding: 3px 9px;
+    border-radius: 12px;
+    border: 1px solid #d5dadd;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    background: #f8f9fa;
+    color: #7f8c8d;
+    transition: all 0.15s;
+}
+.reset-btn:hover {
+    background: #eef2f5;
+    color: #5d6d75;
+}
 .lang-btn {
     padding: 3px 9px; border-radius: 12px; border: 1px solid #bdc3c7;
     font-size: 11px; font-weight: 700; cursor: pointer;
@@ -221,17 +237,95 @@ body {
 /* Phone: stack controls on top, info below */
 @media (max-width: 480px) {
     #controls {
-        top: 5px; left: 5px;
-        width: calc(100vw - 10px);
+        top: 8px; left: 8px; right: 8px;
+        width: auto;
         position: fixed;
-        max-height: 220px;
+        max-height: min(34vh, 250px);
+        border-radius: 12px;
     }
     #info-panel {
-        top: 225px; right: 5px; left: 5px;
+        top: auto; right: 8px; left: 8px; bottom: 8px;
         width: auto;
-        max-height: calc(100vh - 235px);
+        max-height: 104px;
+        border-radius: 12px;
+    }
+    #ctrl-header,
+    #info-header {
+        padding: 10px 12px;
+    }
+    #ctrl-header h1,
+    #info-header h2 {
+        font-size: 13px;
+    }
+    #ctrl-header p,
+    #info-header p {
+        font-size: 10px;
+    }
+    #lang-toggle,
+    .ctrl-section,
+    .info-section {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    #lang-toggle {
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+    .ctrl-section,
+    .info-section {
+        padding-top: 8px;
+        padding-bottom: 8px;
     }
     #legend { display: none; }
-    /* On mobile the "My Location" button IS the primary CTA – make it taller */
-    #btn-my-location { padding: 12px; font-size: 14px; }
+    #btn-my-location {
+        padding: 12px;
+        font-size: 14px;
+    }
+    #option-btns {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(210px, 82vw);
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+    }
+    .option-btn {
+        margin-bottom: 0;
+        min-height: 72px;
+        scroll-snap-align: start;
+    }
+    .option-sub {
+        font-size: 11px;
+    }
+    #ctrl-norms-section,
+    #ctrl-source-section {
+        display: none;
+    }
+    #info-body {
+        max-height: calc(34vh - 60px);
+        overflow-y: auto;
+    }
+    body.has-selection #info-panel {
+        max-height: 34vh;
+    }
+    body:not(.has-selection) #info-body {
+        max-height: 46px;
+        overflow: hidden;
+    }
+    #info-placeholder {
+        padding: 14px 12px;
+        min-height: 0;
+    }
+    #info-placeholder .icon {
+        display: none;
+    }
+    #info-placeholder p {
+        font-size: 11px;
+        line-height: 1.4;
+    }
+    #info-placeholder p:last-child {
+        display: none;
+    }
 }

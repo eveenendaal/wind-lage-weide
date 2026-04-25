@@ -22,25 +22,26 @@
 
     <!-- Language toggle (NL / EN) -->
     <div id="lang-toggle">
+        <button id="btn-reset" class="reset-btn">Reset</button>
         <button id="btn-nl" class="lang-btn active">NL</button>
         <button id="btn-en" class="lang-btn">EN</button>
     </div>
 
     <!-- My Location -->
-    <div class="ctrl-section">
+    <div class="ctrl-section" id="ctrl-location-section">
         <button id="btn-my-location">
             <span class="loc-icon">📍</span> Mijn locatie
         </button>
     </div>
 
     <!-- Alternative toggles -->
-    <div class="ctrl-section">
+    <div class="ctrl-section" id="ctrl-alternatives-section">
         <h3 id="ctrl-alts-h3">Alternatieven</h3>
         <div id="option-btns"></div>
     </div>
 
     <!-- Map layer toggles -->
-    <div class="ctrl-section">
+    <div class="ctrl-section" id="ctrl-layers-section">
         <h3 id="ctrl-layers-h3">Kaartlagen</h3>
         <label id="lbl-turbines" class="layer-toggle"><input type="checkbox" id="toggle-turbines" checked> <span>Windturbines</span></label>
         <label id="lbl-noise"    class="layer-toggle"><input type="checkbox" id="toggle-noise"    checked> <span>Geluidscontouren (47 dB)</span></label>
@@ -49,7 +50,7 @@
     </div>
 
     <!-- Noise-level standards legend -->
-    <div class="ctrl-section">
+    <div class="ctrl-section" id="ctrl-norms-section">
         <h3 id="ctrl-norms-h3">Normen (Lden)</h3>
         <div class="legend-row"><div class="legend-swatch" style="background:#27ae60"></div> <span id="norm-1">&lt; 40 dB – Laag</span></div>
         <div class="legend-row"><div class="legend-swatch" style="background:#f1c40f"></div> <span id="norm-2">40–45 dB – Matig</span></div>
@@ -61,9 +62,11 @@
     </div>
 
     <!-- Data source note -->
-    <div class="ctrl-section" style="font-size:10px;color:#7f8c8d;line-height:1.5;" id="source-note">
+    <div class="ctrl-section" style="font-size:10px;color:#7f8c8d;line-height:1.5;" id="ctrl-source-section">
+        <div id="source-note">
         Bron: cNRD Windpark Lage Weide (Haskoning, maart 2026).
         Berekeningen zijn vereenvoudigde schattingen voor oriëntatie.
+        </div>
     </div>
 </div>
 

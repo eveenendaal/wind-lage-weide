@@ -227,9 +227,9 @@ body {
         max-height: 220px;
     }
     #info-panel {
-        top: 230px; right: 5px; left: 5px;
+        top: 225px; right: 5px; left: 5px;
         width: auto;
-        max-height: calc(100vh - 240px);
+        max-height: calc(100vh - 235px);
     }
     #legend { display: none; }
     /* On mobile the "My Location" button IS the primary CTA – make it taller */

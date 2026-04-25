@@ -48,7 +48,7 @@ const I18N = {
         locContext:      '📍 Locatiecontext',
         distToA2:        'Afstand tot A2',
         a2NoiseLabel:    'A2 geluid (Lden, gecorrigeerd)',
-        a2Note:          'De A2 is een belangrijke bestaande geluidsbron in het gebied. Deze schatting start bij een referentie van 68 dB Lden op 100 m voor open, ongeschermde snelweg en corrigeert vervolgens voor stiller asfalt (tweelaags ZOAB-fijn) op het traject Oudenrijn-Leidsche Rijntunnel. Het overkapte tunneldeel is niet als open geluidsbron meegerekend.',
+        a2Note:          'De A2 is een belangrijke bestaande geluidsbron in het gebied. Deze schatting start bij een referentie van 68 dB Lden op 100 m voor open, ongeschermde snelweg en corrigeert vervolgens voor stiller asfalt (tweelaags ZOAB-fijn) op het traject Oudenrijn-Leidsche Rijntunnel (−4 dB) en een geluidabsorberend scherm langs de A2 in de Lage Weide-corridor (−5 dB, conservatieve schatting). Het overkapte tunneldeel in het noorden en het ondergrondse deel in het zuiden zijn niet als open geluidsbron meegerekend.',
         noiseTitle:      '🔊 Geluid – vergelijking (Lden)',
         thOption:        'Optie',
         thWind:          'Wind',
@@ -103,7 +103,7 @@ const I18N = {
         assessNeededShort: 'Beoordeling nodig',
 
         // A2 tooltip
-        a2Tooltip:       'A2 snelweg (68 dB Lden @100 m ongeschermd; stiller asfalt/tunnel verwerkt)',
+        a2Tooltip:       'A2 snelweg (68 dB Lden @100 m ongeschermd; stiller asfalt −4 dB, geluidscherm −5 dB, tunnels uitgesloten)',
         // Turbine tooltip parts
         tipHeight:       'Tiphoogte',
         safetyZone:      'veiligheidszone',
@@ -140,7 +140,7 @@ const I18N = {
         locContext:      '📍 Location context',
         distToA2:        'Distance to A2',
         a2NoiseLabel:    'A2 noise (Lden, adjusted)',
-        a2Note:          'The A2 motorway is a major existing noise source in the area. This estimate starts from a 68 dB Lden at 100 m reference for open, unshielded motorway traffic and then adjusts for quieter asphalt (double-layer porous asphalt) on the Oudenrijn-Leidsche Rijntunnel section. The covered tunnel section is excluded as an open noise source.',
+        a2Note:          'The A2 motorway is a major existing noise source in the area. This estimate starts from a 68 dB Lden at 100 m reference for open, unshielded motorway traffic and then adjusts for quieter asphalt (double-layer porous asphalt) on the Oudenrijn-Leidsche Rijntunnel section (−4 dB) and a sound-absorbing panel alongside the A2 in the Lage Weide corridor (−5 dB, conservative estimate). The covered northern tunnel section and the southern underground section are excluded as open noise sources.',
         noiseTitle:      '🔊 Noise – comparison (Lden)',
         thOption:        'Option',
         thWind:          'Wind',
@@ -193,7 +193,7 @@ const I18N = {
         risk:            'Risk',
         assessNeededShort: 'Assessment needed',
 
-        a2Tooltip:       'A2 motorway (68 dB Lden @100 m unshielded; quiet asphalt/tunnel adjusted)',
+        a2Tooltip:       'A2 motorway (68 dB Lden @100 m unshielded; quiet asphalt −4 dB, noise barrier −5 dB, tunnels excluded)',
         tipHeight:       'Tip height',
         safetyZone:      'safety zone',
         visLabel:        'km | tip height',
@@ -399,17 +399,20 @@ const A2_PATH = [
     [52.0944796, 5.0702956],
     [52.0929115, 5.0714680],
     [52.0909032, 5.0728984],
-    [52.0892046, 5.0738900],
-    [52.0878250, 5.0745501],
-    [52.0863506, 5.0750535],
-    [52.0854210, 5.0752145]
+    [52.0892046, 5.0738900]
 ];
 
 // Northern covered section (Leidsche Rijntunnel) is drawn on the map but excluded
-// from the open-air line-source noise model.
+// from the open-air line-source noise model.  The southern section was trimmed to
+// the last open-air point; points beyond that represent an underground section and
+// are not included in A2_PATH at all.
 const A2_NOISE_PATH = A2_PATH.slice(7);
 const A2_UNSHIELDED_REF_LDEN = 68;
 const A2_QUIET_ASPHALT_REDUCTION_DB = 4;
+// Sound-absorbing panel alongside the A2 in the Lage Weide corridor.
+// A conservative flat insertion-loss estimate of 5 dB is applied to all
+// receivers; the actual benefit depends on panel height and geometry.
+const A2_BARRIER_REDUCTION_DB = 5;
 
 const LAYER_KEYS = ['turbines', 'noise', 'safety', 'a2'];
 const OPTION_KEYS = Object.keys(TURBINE_OPTIONS);
@@ -561,7 +564,7 @@ function apparentHeightDegrees(heightMetres, distanceMetres) {
      • All turbines in an option treated as identical sources
 
    LINE-SOURCE MODEL (A2 motorway, mitigation-adjusted):
-     Lden ≈ 68 − 4 − 10·log₁₀(d/100)
+     Lden ≈ 68 − 4 − 5 − 10·log₁₀(d/100)
 
    Derivation:
      • 68 dB at 100 m is the reference level for the A2 near Utrecht
@@ -569,8 +572,11 @@ function apparentHeightDegrees(heightMetres, distanceMetres) {
      • −4 dB corrects the open-road reference for quieter asphalt
        (tweelaags ZOAB-fijn / double-layer porous asphalt) used on the
        Oudenrijn–Leidsche Rijntunnel corridor.
-     • The covered Leidsche Rijntunnel section is excluded from the
-       open-air line-source calculation.
+     • −5 dB accounts for the sound-absorbing panel alongside the A2
+       in the Lage Weide corridor (conservative insertion-loss estimate).
+     • The covered Leidsche Rijntunnel section and the southern
+       underground section are excluded from the open-air line-source
+       calculation.
      • 10·log₁₀(d/100) = cylindrical spreading loss
        (3 dB per doubling of distance for an infinite line source).
 
@@ -623,7 +629,7 @@ function calcOptionNoise(lat, lon, optKey) {
 /**
  * Lden from the A2 motorway at a given point.
  *
- * Lden ≈ 68 − 4 − 10·log₁₀(d/100)
+ * Lden ≈ 68 − 4 − 5 − 10·log₁₀(d/100)
  *
  * Minimum distance capped at 25 m (observer cannot be on the road).
  *
@@ -633,7 +639,7 @@ function calcOptionNoise(lat, lon, optKey) {
  */
 function calcA2Noise(lat, lon) {
     const d = Math.max(distToPolyline(lat, lon, A2_NOISE_PATH), 25);
-    return A2_UNSHIELDED_REF_LDEN - A2_QUIET_ASPHALT_REDUCTION_DB - 10 * Math.log10(d / 100);
+    return A2_UNSHIELDED_REF_LDEN - A2_QUIET_ASPHALT_REDUCTION_DB - A2_BARRIER_REDUCTION_DB - 10 * Math.log10(d / 100);
 }
 
 /**

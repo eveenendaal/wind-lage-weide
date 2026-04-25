@@ -1,4 +1,4 @@
-# wind-lage-weide
+# Windpark Lage Weide Explorer
 
 GitHub Pages site with an interactive map and effect calculations for the proposed wind turbines at Lage Weide, Utrecht.
 
@@ -25,16 +25,19 @@ GitHub Pages site with an interactive map and effect calculations for the propos
 - **Interactive map** centred on Lage Weide with OpenStreetMap as base layer
 - **4 wind-turbine alternatives** (A–D) from the cNRD report, each toggleable
 - **"My location" button** – show effects at your own position (uses browser geolocation)
+- **Shareable URL state** – language, active filters, layers and selected point survive refresh and can be shared
+- **Reset button** – restore the default view and clear saved URL state
 - **Click anywhere on the map** to see estimated effects at that location:
   - 🔊 **Noise (Lden)** – per alternative, compared with A2 motorway background and combined cumulative level
   - ☀️ **Shadow flicker** – estimated annual hours without automatic shutdown
   - ⚠️ **External safety** – distance to nearest turbine vs. tip-height safety zone
   - 🏥 **Health** – TNO dose-effect relationship (% seriously annoyed)
   - 🦅 **Nature** – birds, bats, Natura 2000 proximity
-  - 🌆 **Landscape** – distance and tip height per alternative
+  - 🌆 **Landscape** – distance, tip height and apparent turbine size per alternative
   - ⚡ **Energy output** – MWh/year, households powered, CO₂ avoided
 - **Noise contour circles** (47 dB Lden) around individual turbines
-- **A2 motorway** drawn on map with noise model reference
+- **Connector lines** from the selected point to the nearest turbine in each active option and to the A2
+- **A2 motorway** available as an optional map layer with a mitigation-adjusted noise model
 - **Dutch / English language toggle** in the control panel
 
 ### File structure
@@ -70,13 +73,15 @@ Ltotal = 10·log₁₀( Σ 10^(Lᵢ/10) )
 ```
 Simply adding dB values is incorrect – this formula is physically correct.
 
-#### 2. A2 motorway noise – line-source model
+#### 2. A2 motorway noise – mitigation-adjusted line-source model
 
 ```
-Lden ≈ 68 − 10·log₁₀(d / 100)    [dB]
+Lden ≈ 68 − 4 − 10·log₁₀(d / 100)    [dB]
 ```
 
-- Reference level: 68 dB at 100 m (RIVM/RWS monitoring data, unshielded)
+- Reference level: 68 dB at 100 m for open, unshielded motorway traffic
+- Mitigation correction: 4 dB reduction for quieter asphalt (tweelaags ZOAB-fijn / double-layer porous asphalt)
+- The covered Leidsche Rijntunnel section is excluded from the open-air line-source calculation
 - Line-source spreading: 3 dB per distance doubling (vs. 6 dB for point sources)
 
 #### 3. Shadow flicker estimate
@@ -105,7 +110,19 @@ h ≈ 400 × (D / d)²    [hours/year]
 
 Reference: *Handboek Risicozonering Windturbines* (2020).
 
-#### 5. Energy output
+#### 5. Landscape / apparent size estimate
+
+For the nearest turbine in each active alternative, the app also estimates the apparent angular height:
+
+```
+θ ≈ 2 · atan(H / 2d)    [degrees]
+```
+
+- `H` = tip height of the turbine
+- `d` = distance from the selected location
+- The result is also shown as a rough multiple of the full moon's apparent size
+
+#### 6. Energy output
 
 ```
 E    = N × P × FLH          [MWh/year]
@@ -134,16 +151,19 @@ CO₂  = E × 0.4              [tonnes CO₂/year]
 - **Interactieve kaart** gecentreerd op Lage Weide met OpenStreetMap als basislaag
 - **4 windturbine-alternatieven** (A–D) uit de cNRD, elk aan/uit te zetten
 - **'Mijn locatie'-knop** – toont effecten op jouw eigen positie (via browserlocatie)
+- **Deelbare URL-status** – taal, actieve filters, lagen en geselecteerd punt blijven na refresh behouden en zijn deelbaar
+- **Resetknop** – zet alles terug naar de standaardweergave en wist de URL-status
 - **Klik op de kaart** voor effecten op die locatie:
   - 🔊 **Geluid (Lden)** – per alternatief, vergeleken met A2-achtergrond en cumulatief
   - ☀️ **Slagschaduw** – geschatte jaarlijkse uren zonder automatische stilstand
   - ⚠️ **Externe veiligheid** – afstand tot dichtste turbine vs. tiphoogtezone
   - 🏥 **Gezondheid** – TNO dosis-effectrelatie (% ernstig gehinderd)
   - 🦅 **Natuur** – vogels, vleermuizen, Natura 2000-nabijheid
-  - 🌆 **Landschap** – afstand en tiphoogte per alternatief
+  - 🌆 **Landschap** – afstand, tiphoogte en schijnbare grootte per alternatief
   - ⚡ **Energieopbrengst** – MWh/jaar, huishoudens, CO₂ vermeden
 - **Geluidscontouren** (47 dB Lden) rondom individuele turbines
-- **A2 snelweg** op de kaart met geluidsniveaureferentie
+- **Verbindingslijnen** van het geselecteerde punt naar de dichtstbijzijnde turbine per actief alternatief en naar de A2
+- **A2 snelweg** als optionele kaartlaag met een gecorrigeerd geluidsmodel
 - **Nederlandse / Engelse taalwissel** in het linkerpaneel
 
 ### Bestandsstructuur
@@ -179,13 +199,15 @@ Ltotaal = 10·log₁₀( Σ 10^(Lᵢ/10) )
 ```
 dB-waarden optellen is fysisch onjuist; bovenstaande formule is correct.
 
-#### 2. A2-snelweggeluid – lijnbronmodel
+#### 2. A2-snelweggeluid – gecorrigeerd lijnbronmodel
 
 ```
-Lden ≈ 68 − 10·log₁₀(d / 100)    [dB]
+Lden ≈ 68 − 4 − 10·log₁₀(d / 100)    [dB]
 ```
 
-- Referentieniveau: 68 dB op 100 m (RIVM/RWS monitoringdata, ongeschermd)
+- Referentieniveau: 68 dB op 100 m voor open, ongeschermd snelwegverkeer
+- Mitigatiecorrectie: 4 dB reductie voor stiller asfalt (tweelaags ZOAB-fijn)
+- Het overkapte deel van de Leidsche Rijntunnel telt niet mee als open lijnbron
 - Lijnbronverzwakking: 3 dB per afstandsverdubbeling (vs. 6 dB voor puntbronnen)
 
 #### 3. Slagschaduwschatting
@@ -214,7 +236,19 @@ h ≈ 400 × (D / d)²    [uur/jaar]
 
 Referentie: *Handboek Risicozonering Windturbines* (2020).
 
-#### 5. Energieopbrengst
+#### 5. Landschap / schijnbare grootte
+
+Voor de dichtstbijzijnde turbine in elk actief alternatief schat de app ook de schijnbare hoekhoogte:
+
+```
+θ ≈ 2 · atan(H / 2d)    [graden]
+```
+
+- `H` = tiphoogte van de turbine
+- `d` = afstand vanaf de geselecteerde locatie
+- Het resultaat wordt ook getoond als grove vergelijking met de schijnbare grootte van de volle maan
+
+#### 6. Energieopbrengst
 
 ```
 E    = N × P × VLU          [MWh/jaar]

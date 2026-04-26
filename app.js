@@ -112,8 +112,8 @@ const I18N = {
 
         // Horizon silhouette
         horizonTitle:    '🔭 Horizonsilhouet',
-        horizonNote:     'Schematische weergave van de hoekgroottes op basis van geometrische berekening. Links zijn een referentiehuis (7 m) en referentieboom (15 m) op 50 m afstand getoond. Schaal is automatisch aangepast aan het hoogste object. Werkelijke zichtbaarheid hangt ook af van weersomstandigheden en exacte positie.',
-        horizonRefLabel: 'Links ter vergelijking: 🏠 huis 7 m en 🌳 boom 15 m op 50 m afstand',
+        horizonNote:     'Schematische weergave van de hoekgroottes op basis van geometrische berekening. Naast de dichtstbijzijnde windmolen zijn een referentie-rijtjeshuis (7 m) en referentiepopulier (15 m) op 50 m afstand getoond. Schaal is automatisch aangepast aan het hoogste object. Werkelijke zichtbaarheid hangt ook af van weersomstandigheden en exacte positie.',
+        horizonRefLabel: 'Ter vergelijking naast dichtstbijzijnde molen: 🏠 rijtjeshuis 7 m en 🌳 populier 15 m op 50 m afstand',
     },
 
     en: {
@@ -205,8 +205,8 @@ const I18N = {
 
         // Horizon silhouette
         horizonTitle:    '🔭 Horizon silhouette',
-        horizonNote:     'Schematic view of turbine angular sizes based on geometric calculation. A reference house (7 m) and tree (15 m) at 50 m distance are shown on the left. Scale is auto-adjusted to the tallest object. Actual visibility also depends on weather conditions and exact position.',
-        horizonRefLabel: 'Left for comparison: 🏠 house 7 m and 🌳 tree 15 m at 50 m distance',
+        horizonNote:     'Schematic view of turbine angular sizes based on geometric calculation. A reference Dutch terraced house (7 m) and poplar tree (15 m) at 50 m distance are shown next to the nearest turbine. Scale is auto-adjusted to the tallest object. Actual visibility also depends on weather conditions and exact position.',
+        horizonRefLabel: 'For comparison next to nearest turbine: 🏠 terraced house 7 m and 🌳 poplar 15 m at 50 m distance',
     }
 };
 
@@ -656,38 +656,66 @@ function renderHorizonSVG(lat, lon) {
         svg += `<line x1="${x}" y1="${groundY}" x2="${x}" y2="${groundY + 2}" stroke="#7aaa60" stroke-width="0.5"/>`;
     }
 
-    // Reference silhouettes: house (7 m) and tree (15 m) at REF_DIST = 50 m.
-    // Drawn at fixed bearings near North so they are clear comparison anchors.
-    // Turbines rendered afterwards will appear in front if they share a bearing.
+    // Reference silhouettes: Dutch-style house (7 m) and poplar tree (15 m) at REF_DIST = 50 m.
+    // Positioned dynamically next to the nearest turbine so the height comparison is intuitive
+    // while not overlapping the turbine silhouette itself.
     {
-        // House: bearing ≈ 4°, width = 7 SVG units
-        const hx = 4, hw = 7;
+        // Find nearest turbine and its SVG x position to anchor the reference objects.
+        const nearestItem = items.reduce((a, b) => a.dist < b.dist ? a : b);
+        const rotorRnear  = Math.max(nearestItem.rotorRadAng * scale, minRotorRadiusPx);
+        const gap         = rotorRnear + 4;   // clear rotor disc edge plus a small margin
+
+        // Try placing to the right of the nearest turbine; fall back to the left if near the edge.
+        let hx, tx;
+        const nb = nearestItem.bearing;
+        if (nb + gap + 18 <= 356) {
+            hx = nb + gap;
+            tx = nb + gap + 12;
+        } else if (nb - gap - 18 >= 4) {
+            tx = nb - gap;
+            hx = nb - gap - 12;
+        } else {
+            hx = 5;
+            tx = 18;
+        }
+
+        const hw = 8;
         const houseWallY = groundY - houseWallElev * scale;
         const houseRoofY = groundY - houseTopElev  * scale;
-        // Walls (rectangle)
+
+        // Dutch brick house: warm brick-red walls, steep dark clay-tile roof, chimney.
+        // Walls
         svg += `<rect x="${(hx - hw / 2).toFixed(2)}" y="${houseWallY.toFixed(2)}"` +
                ` width="${hw}" height="${(groundY - houseWallY).toFixed(2)}"` +
-               ` fill="#8a8a8a" stroke="#555" stroke-width="0.3" opacity="0.85"/>`;
-        // Roof (triangle)
-        svg += `<polygon points="${(hx - hw / 2).toFixed(2)},${houseWallY.toFixed(2)}` +
-               ` ${(hx + hw / 2).toFixed(2)},${houseWallY.toFixed(2)}` +
+               ` fill="#b84c26" stroke="#7a2f10" stroke-width="0.3" opacity="0.9"/>`;
+        // Steep pitched roof (dark clay tiles, slightly wider than walls for eaves)
+        svg += `<polygon points="${(hx - hw / 2 - 1).toFixed(2)},${houseWallY.toFixed(2)}` +
+               ` ${(hx + hw / 2 + 1).toFixed(2)},${houseWallY.toFixed(2)}` +
                ` ${hx},${houseRoofY.toFixed(2)}"` +
-               ` fill="#6e6e6e" stroke="#444" stroke-width="0.3" opacity="0.85"/>`;
-    }
-    {
-        // Tree: bearing ≈ 15°, crown half-width = 4.5, trunk width = 1.5
-        const tx = 15, tHalfW = 4.5, trunkW = 1.5;
+               ` fill="#2e1508" stroke="#1a0c04" stroke-width="0.3" opacity="0.9"/>`;
+        // Chimney (offset from ridge toward right side of roof)
+        const chimneyX    = hx + 2;
+        const chimneyTopY = houseRoofY + (houseWallY - houseRoofY) * 0.45;
+        svg += `<rect x="${(chimneyX - 0.7).toFixed(2)}" y="${chimneyTopY.toFixed(2)}"` +
+               ` width="1.4" height="${(houseWallY - chimneyTopY).toFixed(2)}"` +
+               ` fill="#8c3b1e" stroke="#5a2010" stroke-width="0.2" opacity="0.9"/>`;
+
+        // Dutch poplar tree: slender trunk, tall narrow elliptical crown typical of Dutch polders.
+        const trunkW     = 1.2;
         const treeTrunkY = groundY - treeTrunkElev * scale;
         const treeCrownY = groundY - treeTopElev   * scale;
-        // Trunk (rectangle)
+        const crownCy    = (treeTrunkY + treeCrownY) / 2;
+        const crownRy    = (treeTrunkY - treeCrownY) / 2;
+        const crownRx    = 2.5;   // narrow for poplar silhouette
+
+        // Trunk
         svg += `<rect x="${(tx - trunkW / 2).toFixed(2)}" y="${treeTrunkY.toFixed(2)}"` +
                ` width="${trunkW}" height="${(groundY - treeTrunkY).toFixed(2)}"` +
-               ` fill="#5c3d1a" stroke="none" opacity="0.85"/>`;
-        // Crown (filled triangle)
-        svg += `<polygon points="${(tx - tHalfW).toFixed(2)},${treeTrunkY.toFixed(2)}` +
-               ` ${(tx + tHalfW).toFixed(2)},${treeTrunkY.toFixed(2)}` +
-               ` ${tx},${treeCrownY.toFixed(2)}"` +
-               ` fill="#2e7d32" stroke="#1b5e20" stroke-width="0.4" opacity="0.85"/>`;
+               ` fill="#4a2e0e" stroke="none" opacity="0.9"/>`;
+        // Narrow elliptical crown
+        svg += `<ellipse cx="${tx.toFixed(2)}" cy="${crownCy.toFixed(2)}"` +
+               ` rx="${crownRx}" ry="${crownRy.toFixed(2)}"` +
+               ` fill="#376b2a" stroke="#1e4a15" stroke-width="0.4" opacity="0.9"/>`;
     }
 
     // Draw turbines back-to-front so nearer turbines render on top.

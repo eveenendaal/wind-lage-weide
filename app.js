@@ -109,6 +109,12 @@ const I18N = {
         safetyZone:      'veiligheidszone',
         // km/visibility
         visLabel:        'km | tiphoogte',
+
+        // Horizon silhouette
+        horizonTitle:    '🔭 Horizonsilhouet',
+        horizonNote:     'Schematische weergave van de hoekgroottes op basis van geometrische berekening. Schaal is automatisch aangepast aan de actieve opties. Werkelijke zichtbaarheid is afhankelijk van bebouwing, bomen en weersomstandigheden.',
+        streetViewBtn:   'Open Google Street View',
+        streetViewNote:  'Street View toont het huidige landschap; toekomstige turbines zijn niet zichtbaar.',
     },
 
     en: {
@@ -197,6 +203,12 @@ const I18N = {
         tipHeight:       'Tip height',
         safetyZone:      'safety zone',
         visLabel:        'km | tip height',
+
+        // Horizon silhouette
+        horizonTitle:    '🔭 Horizon silhouette',
+        horizonNote:     'Schematic view of turbine angular sizes based on geometric calculation. Scale is auto-adjusted to the active alternatives. Actual visibility depends on buildings, trees and weather conditions.',
+        streetViewBtn:   'Open Google Street View',
+        streetViewNote:  'Street View shows the current landscape; future turbines are not visible.',
     }
 };
 
@@ -526,6 +538,128 @@ function nearestPointOnPolyline(lat, lon, polyline) {
 function apparentHeightDegrees(heightMetres, distanceMetres) {
     const d = Math.max(distanceMetres, 1);
     return 2 * Math.atan(heightMetres / (2 * d)) * 180 / Math.PI;
+}
+
+/**
+ * Elevation angle from the observer's eye level (ground) to the top of an
+ * object of given height at a given horizontal distance.
+ *
+ * @param {number} heightMetres   – object height [m]
+ * @param {number} distanceMetres – horizontal distance [m]
+ * @returns {number} elevation angle [degrees]
+ */
+function elevationDegrees(heightMetres, distanceMetres) {
+    const d = Math.max(distanceMetres, 1);
+    return Math.atan(heightMetres / d) * 180 / Math.PI;
+}
+
+/**
+ * True north bearing from point 1 to point 2, returned as [0, 360).
+ *
+ * @param {number} lat1 – observer latitude [degrees]
+ * @param {number} lon1 – observer longitude [degrees]
+ * @param {number} lat2 – target latitude [degrees]
+ * @param {number} lon2 – target longitude [degrees]
+ * @returns {number} bearing [degrees, 0 = N, 90 = E, 180 = S, 270 = W]
+ */
+function bearingDegrees(lat1, lon1, lat2, lon2) {
+    const phi1 = lat1 * Math.PI / 180;
+    const phi2 = lat2 * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const y    = Math.sin(dLon) * Math.cos(phi2);
+    const x    = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLon);
+    return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
+
+/**
+ * Build a 360° panoramic SVG showing the angular silhouette of all active
+ * wind turbines as seen from the observer at (lat, lon).
+ *
+ * Each turbine is drawn as a colour-coded tower line topped by a rotor disc
+ * at its geometrically correct bearing and elevation angles. The vertical
+ * scale is auto-fitted to the tallest visible turbine.
+ *
+ * @param {number} lat – observer latitude [degrees]
+ * @param {number} lon – observer longitude [degrees]
+ * @returns {{ svgMarkup: string, nearestBearing: number }|null}
+ *   Returns null when no turbine alternatives are active.
+ */
+function renderHorizonSVG(lat, lon) {
+    // Collect silhouette data for every turbine in every active alternative.
+    const items       = [];
+    let maxTipElev    = 0;
+    let nearestBearing = null;
+    let nearestDist   = Infinity;
+
+    for (const [key, opt] of Object.entries(TURBINE_OPTIONS)) {
+        if (!activeOptions[key]) continue;
+        for (const turbine of opt.turbines) {
+            const dist        = haversine(lat, lon, turbine.lat, turbine.lon);
+            const bearing     = bearingDegrees(lat, lon, turbine.lat, turbine.lon);
+            const tipElev     = elevationDegrees(opt.tip_height, dist);
+            const hubElev     = elevationDegrees(opt.hub_height, dist);
+            const rotorTopElev = elevationDegrees(opt.hub_height + opt.rotor_diam / 2, dist);
+            const rotorBotElev = Math.max(0, elevationDegrees(opt.hub_height - opt.rotor_diam / 2, dist));
+            const rotorRadAng  = (rotorTopElev - rotorBotElev) / 2;
+            items.push({ opt, dist, bearing, tipElev, hubElev, rotorRadAng });
+            if (tipElev > maxTipElev) maxTipElev = tipElev;
+            if (dist < nearestDist) { nearestDist = dist; nearestBearing = bearing; }
+        }
+    }
+
+    if (items.length === 0) return null;
+
+    // SVG layout constants.
+    const svgW    = 360;
+    const groundY = 58;
+    const svgH    = 68;
+    const usableH = groundY - 4;   // 54 px for turbine drawings
+    // Auto-scale: tallest turbine fills ~87 % of usable height; minimum 1° to avoid flat drawings.
+    const scale   = usableH / Math.max(maxTipElev * 1.15, 1.0);
+
+    let svg = `<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg"` +
+              ` style="width:100%;height:auto;display:block;border-radius:6px;overflow:hidden;">`;
+
+    // Sky gradient background.
+    svg += `<defs><linearGradient id="hzSky" x1="0" y1="0" x2="0" y2="1">` +
+           `<stop offset="0%" stop-color="#b8d9ed"/>` +
+           `<stop offset="100%" stop-color="#ddf0fb"/>` +
+           `</linearGradient></defs>`;
+    svg += `<rect x="0" y="0" width="${svgW}" height="${groundY}" fill="url(#hzSky)"/>`;
+    // Ground strip.
+    svg += `<rect x="0" y="${groundY}" width="${svgW}" height="${svgH - groundY}" fill="#8cb87c"/>`;
+    svg += `<line x1="0" y1="${groundY}" x2="${svgW}" y2="${groundY}" stroke="#5a8a4a" stroke-width="0.8"/>`;
+
+    // Compass ticks and cardinal labels.
+    for (const { x, label } of [
+        { x: 0, label: 'N' }, { x: 90, label: 'E' },
+        { x: 180, label: 'S' }, { x: 270, label: 'W' }, { x: 360, label: 'N' }
+    ]) {
+        svg += `<line x1="${x}" y1="${groundY}" x2="${x}" y2="${groundY + 3}" stroke="#5a8a4a" stroke-width="0.8"/>`;
+        svg += `<text x="${x}" y="${svgH - 1}" text-anchor="middle" font-size="6.5"` +
+               ` font-family="sans-serif" fill="#3d6e30">${label}</text>`;
+    }
+    // Minor ticks at intercardinal points.
+    for (const x of [45, 135, 225, 315]) {
+        svg += `<line x1="${x}" y1="${groundY}" x2="${x}" y2="${groundY + 2}" stroke="#7aaa60" stroke-width="0.5"/>`;
+    }
+
+    // Draw turbines back-to-front so nearer turbines render on top.
+    const sorted = items.slice().sort((a, b) => b.dist - a.dist);
+    for (const { opt, bearing, hubElev, rotorRadAng } of sorted) {
+        const bx     = bearing.toFixed(1);
+        const hubY   = (groundY - hubElev * scale).toFixed(1);
+        const rotorR = Math.max(rotorRadAng * scale, 0.8).toFixed(1);
+        // Tower: ground → hub centre.
+        svg += `<line x1="${bx}" y1="${groundY}" x2="${bx}" y2="${hubY}"` +
+               ` stroke="${opt.color}" stroke-width="1.5" opacity="0.9"/>`;
+        // Rotor disc: circle at hub height.
+        svg += `<circle cx="${bx}" cy="${hubY}" r="${rotorR}"` +
+               ` fill="${opt.color}" fill-opacity="0.3" stroke="${opt.color}" stroke-width="0.8" opacity="0.9"/>`;
+    }
+
+    svg += '</svg>';
+    return { svgMarkup: svg, nearestBearing };
 }
 
 
@@ -1432,6 +1566,21 @@ function updateInfoPanel(lat, lon) {
     html += `<div style="font-size:10px;color:#95a5a6;margin-top:3px;">${t('landscapeNote')}</div>
         </div>
     </div>`;
+
+    /* ── Horizon silhouette & Street View ── */
+    const horizonData = renderHorizonSVG(lat, lon);
+    if (horizonData) {
+        const svBearing = Math.round(horizonData.nearestBearing);
+        const svUrl = `https://www.google.com/maps/@${lat.toFixed(6)},${lon.toFixed(6)},3a,75y,${svBearing}h,90t/data=!3m6!1e1`;
+        html += `<div class="info-section">
+        <h4>${t('horizonTitle')}</h4>
+        ${horizonData.svgMarkup}
+        <div style="margin-top:6px;display:flex;justify-content:flex-end;">
+            <a href="${svUrl}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#2980b9;text-decoration:none;">🗺️ ${t('streetViewBtn')} ↗</a>
+        </div>
+        <div style="font-size:10px;color:#95a5a6;margin-top:3px;">${t('horizonNote')}<br>${t('streetViewNote')}</div>
+    </div>`;
+    }
 
     /* ── Energy output ── */
     html += `<div class="info-section">

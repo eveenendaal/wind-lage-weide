@@ -114,8 +114,6 @@ const I18N = {
         horizonTitle:    '🔭 Horizonsilhouet',
         horizonNote:     'Schematische weergave van de hoekgroottes op basis van geometrische berekening. Links zijn een referentiehuis (7 m) en referentieboom (15 m) op 50 m afstand getoond. Schaal is automatisch aangepast aan het hoogste object. Werkelijke zichtbaarheid hangt ook af van weersomstandigheden en exacte positie.',
         horizonRefLabel: 'Links ter vergelijking: 🏠 huis 7 m en 🌳 boom 15 m op 50 m afstand',
-        streetViewBtn:   'Open Google Street View',
-        streetViewNote:  'Street View toont het huidige landschap; toekomstige turbines zijn niet zichtbaar.',
     },
 
     en: {
@@ -209,8 +207,6 @@ const I18N = {
         horizonTitle:    '🔭 Horizon silhouette',
         horizonNote:     'Schematic view of turbine angular sizes based on geometric calculation. A reference house (7 m) and tree (15 m) at 50 m distance are shown on the left. Scale is auto-adjusted to the tallest object. Actual visibility also depends on weather conditions and exact position.',
         horizonRefLabel: 'Left for comparison: 🏠 house 7 m and 🌳 tree 15 m at 50 m distance',
-        streetViewBtn:   'Open Google Street View',
-        streetViewNote:  'Street View shows the current landscape; future turbines are not visible.',
     }
 };
 
@@ -583,14 +579,12 @@ function bearingDegrees(lat1, lon1, lat2, lon2) {
  *
  * @param {number} lat – observer latitude [degrees]
  * @param {number} lon – observer longitude [degrees]
- * @returns {{ svgMarkup: string, nearestBearing: number }|null}
- *   Returns null when no turbine alternatives are active.
+ * @returns {string|null} SVG markup string, or null when no turbine alternatives are active.
  */
 function renderHorizonSVG(lat, lon) {
     // Collect silhouette data for every turbine in every active alternative.
     const items       = [];
     let maxTipElev    = 0;
-    let nearestBearing = null;
     let nearestDist   = Infinity;
 
     for (const [key, opt] of Object.entries(TURBINE_OPTIONS)) {
@@ -605,7 +599,7 @@ function renderHorizonSVG(lat, lon) {
             const rotorRadAng  = (rotorTopElev - rotorBotElev) / 2;
             items.push({ opt, dist, bearing, tipElev, hubElev, rotorRadAng });
             if (tipElev > maxTipElev) maxTipElev = tipElev;
-            if (dist < nearestDist) { nearestDist = dist; nearestBearing = bearing; }
+            if (dist < nearestDist) { nearestDist = dist; }
         }
     }
 
@@ -711,7 +705,7 @@ function renderHorizonSVG(lat, lon) {
     }
 
     svg += '</svg>';
-    return { svgMarkup: svg, nearestBearing };
+    return svg;
 }
 
 
@@ -1619,18 +1613,13 @@ function updateInfoPanel(lat, lon) {
         </div>
     </div>`;
 
-    /* ── Horizon silhouette & Street View ── */
-    const horizonData = renderHorizonSVG(lat, lon);
-    if (horizonData) {
-        const svBearing = Math.round(horizonData.nearestBearing);
-        const svUrl = `https://www.google.com/maps/@${lat.toFixed(6)},${lon.toFixed(6)},3a,75y,${svBearing}h,90t/data=!3m6!1e1`;
+    /* ── Horizon silhouette ── */
+    const horizonSVG = renderHorizonSVG(lat, lon);
+    if (horizonSVG) {
         html += `<div class="info-section">
         <h4>${t('horizonTitle')}</h4>
-        ${horizonData.svgMarkup}
-        <div style="margin-top:6px;display:flex;justify-content:flex-end;">
-            <a href="${svUrl}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#2980b9;text-decoration:none;">🗺️ ${t('streetViewBtn')} ↗</a>
-        </div>
-        <div style="font-size:10px;color:#95a5a6;margin-top:3px;">${t('horizonRefLabel')}<br>${t('horizonNote')}<br>${t('streetViewNote')}</div>
+        ${horizonSVG}
+        <div style="font-size:10px;color:#95a5a6;margin-top:3px;">${t('horizonRefLabel')}<br>${t('horizonNote')}</div>
     </div>`;
     }
 

@@ -31,6 +31,7 @@ const I18N = {
         layerNoise:      'Geluidscontouren (47 dB)',
         layerSafety:     'Veiligheidszone (tiphoogte)',
         layerA2:         'A2 snelweg',
+        layerContext:    'Referentiehuis & boom (50 m)',
         norms:           'Normen (Lden)',
         norm1:           '< 40 dB – Laag',
         norm2:           '40–45 dB – Matig',
@@ -108,11 +109,15 @@ const I18N = {
         safetyZone:      'veiligheidszone',
         // km/visibility
         visLabel:        'km | tiphoogte',
+        contextHouse:    'Referentiehuis',
+        contextTree:     'Referentiepopulier',
+        contextRadius:   'Referentieafstand',
+        contextTooltip:  'Alleen ter schaalvergelijking: ${label} van ${height} m op ${distance} m van het gekozen punt.',
 
         // Horizon silhouette
         horizonTitle:    '🔭 Horizonsilhouet',
         horizonNote:     'Schematische weergave van de hoekgroottes op basis van geometrische berekening. Een referentie-rijtjeshuis (7 m) en referentiepopulier (15 m) op 50 m afstand staan net buiten de windmolengroep. Het beeld is gecentreerd op de dichtstbijzijnde windmolen. Schaal is automatisch aangepast aan het hoogste object. Werkelijke zichtbaarheid hangt ook af van weersomstandigheden en exacte positie.',
-        horizonRefLabel: 'Ter vergelijking buiten de windmolengroep: 🏠 rijtjeshuis 7 m en 🌳 populier 15 m op 50 m afstand',
+        horizonRefLabel: 'Ter context buiten de windmolengroep: 🏠 rijtjeshuis 7 m en 🌳 populier 15 m op 50 m afstand',
     },
 
     en: {
@@ -128,6 +133,7 @@ const I18N = {
         layerNoise:      'Noise contours (47 dB)',
         layerSafety:     'Safety zone (tip height)',
         layerA2:         'A2 motorway',
+        layerContext:    'Example house & tree (50 m)',
         norms:           'Standards (Lden)',
         norm1:           '< 40 dB – Low',
         norm2:           '40–45 dB – Moderate',
@@ -200,11 +206,15 @@ const I18N = {
         tipHeight:       'Tip height',
         safetyZone:      'safety zone',
         visLabel:        'km | tip height',
+        contextHouse:    'Reference house',
+        contextTree:     'Reference poplar',
+        contextRadius:   'Reference distance',
+        contextTooltip:  'For scale only: ${label} of ${height} m at ${distance} m from the selected point.',
 
         // Horizon silhouette
         horizonTitle:    '🔭 Horizon silhouette',
         horizonNote:     'Schematic view of turbine angular sizes based on geometric calculation. A reference Dutch terraced house (7 m) and poplar tree (15 m) at 50 m distance are shown just outside the turbine group. The view is centered on the nearest turbine. Scale is auto-adjusted to the tallest object. Actual visibility also depends on weather conditions and exact position.',
-        horizonRefLabel: 'For comparison outside the turbine group: 🏠 terraced house 7 m and 🌳 poplar 15 m at 50 m distance',
+        horizonRefLabel: 'For context outside the turbine group: 🏠 terraced house 7 m and 🌳 poplar 15 m at 50 m distance',
     }
 };
 
@@ -213,6 +223,10 @@ let LANG = 'nl';
 
 /** Convenience accessor: returns the translated string for key `k`. */
 function t(k) { return I18N[LANG][k]; }
+
+function tf(k, vars) {
+    return t(k).replace(/\$\{(\w+)\}/g, (_, name) => String(vars[name] ?? ''));
+}
 
 function parseCsvParam(value, validKeys) {
     if (value === null) return null;
@@ -414,7 +428,13 @@ const A2_QUIET_ASPHALT_REDUCTION_DB = 4;
 // receivers; the actual benefit depends on panel height and geometry.
 const A2_BARRIER_REDUCTION_DB = 5;
 
-const LAYER_KEYS = ['turbines', 'noise', 'safety', 'a2'];
+const HORIZON_REF_DIST = 50;
+const HORIZON_HOUSE_H = 7;
+const HORIZON_HOUSE_WALL_H = 5;
+const HORIZON_TREE_H = 15;
+const HORIZON_TREE_TRUNK_H = 3;
+
+const LAYER_KEYS = ['turbines', 'noise', 'safety', 'a2', 'context'];
 const OPTION_KEYS = Object.keys(TURBINE_OPTIONS);
 const URL_STATE = parseUrlState();
 LANG = URL_STATE.lang;
@@ -609,15 +629,10 @@ function renderHorizonSVG(lat, lon) {
     }
 
     // Reference objects drawn at fixed distance for visual comparison.
-    const REF_DIST      = 50;   // metres – representative near-field distance
-    const HOUSE_H       = 7;    // total house height (walls + roof) [m]
-    const HOUSE_WALL_H  = 5;    // wall-only height [m]
-    const TREE_H        = 15;   // total tree height [m]
-    const TREE_TRUNK_H  = 3;    // trunk-only height [m]
-    const houseTopElev  = elevationDegrees(HOUSE_H,     REF_DIST);
-    const houseWallElev = elevationDegrees(HOUSE_WALL_H, REF_DIST);
-    const treeTopElev   = elevationDegrees(TREE_H,      REF_DIST);
-    const treeTrunkElev = elevationDegrees(TREE_TRUNK_H, REF_DIST);
+    const houseTopElev  = elevationDegrees(HORIZON_HOUSE_H, HORIZON_REF_DIST);
+    const houseWallElev = elevationDegrees(HORIZON_HOUSE_WALL_H, HORIZON_REF_DIST);
+    const treeTopElev   = elevationDegrees(HORIZON_TREE_H, HORIZON_REF_DIST);
+    const treeTrunkElev = elevationDegrees(HORIZON_TREE_TRUNK_H, HORIZON_REF_DIST);
 
     // SVG layout constants.
     const svgW              = 360;
@@ -1048,6 +1063,7 @@ const turbineGroup = L.layerGroup().addTo(map);
 const noiseGroup   = L.layerGroup().addTo(map);
 const safetyGroup  = L.layerGroup();            // off by default
 const a2Group      = L.layerGroup();            // off by default
+const contextGroup = L.layerGroup();            // off by default
 const selectionGroup = L.layerGroup().addTo(map);
 let clickMarker = null;
 let lastClickedLatLon = null;
@@ -1057,6 +1073,7 @@ function syncLayerVisibility() {
     document.getElementById('toggle-noise').checked ? noiseGroup.addTo(map) : map.removeLayer(noiseGroup);
     document.getElementById('toggle-safety').checked ? safetyGroup.addTo(map) : map.removeLayer(safetyGroup);
     document.getElementById('toggle-a2').checked ? a2Group.addTo(map) : map.removeLayer(a2Group);
+    document.getElementById('toggle-context').checked ? contextGroup.addTo(map) : map.removeLayer(contextGroup);
 }
 
 function applyInitialUrlState() {
@@ -1085,6 +1102,7 @@ function resetAppState() {
     document.getElementById('toggle-noise').checked = true;
     document.getElementById('toggle-safety').checked = false;
     document.getElementById('toggle-a2').checked = false;
+    document.getElementById('toggle-context').checked = false;
 
     if (clickMarker) {
         map.removeLayer(clickMarker);
@@ -1093,6 +1111,7 @@ function resetAppState() {
 
     lastClickedLatLon = null;
     selectionGroup.clearLayers();
+    contextGroup.clearLayers();
     syncLayerVisibility();
     buildControls();
     redrawAll();
@@ -1241,12 +1260,76 @@ function drawSelectionLines() {
       .bindTooltip(`${t('distToA2')}: ${Math.round(nearestA2.dist)} m`, { sticky: true });
 }
 
+function offsetLatLonMetres(lat, lon, eastMetres, northMetres) {
+    const { xScale, yScale } = projectLatLon(lat, lon, lat, lon);
+    return unprojectPoint(eastMetres, northMetres, lat, lon, xScale, yScale);
+}
+
+function makeContextIcon(emoji) {
+    return L.divIcon({
+        className: '',
+        html: `<div style="
+            font-size:20px;
+            line-height:20px;
+            text-shadow:0 1px 4px rgba(255,255,255,0.95), 0 1px 6px rgba(0,0,0,0.45);
+        ">${emoji}</div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+    });
+}
+
+function drawContextReferences() {
+    contextGroup.clearLayers();
+    if (!lastClickedLatLon) return;
+
+    const { lat, lon } = lastClickedLatLon;
+    const housePoint = offsetLatLonMetres(lat, lon, -HORIZON_REF_DIST, 0);
+    const treePoint = offsetLatLonMetres(lat, lon, HORIZON_REF_DIST, 0);
+
+    L.circle([lat, lon], {
+        radius: HORIZON_REF_DIST,
+        color: '#5d6d7e',
+        weight: 1.5,
+        opacity: 0.8,
+        dashArray: '4 5',
+        fillOpacity: 0
+    }).addTo(contextGroup)
+      .bindTooltip(`${t('contextRadius')}: ${HORIZON_REF_DIST} m`, { sticky: true });
+
+    L.marker([housePoint.lat, housePoint.lon], {
+        icon: makeContextIcon('🏠'),
+        zIndexOffset: 250
+    }).addTo(contextGroup)
+      .bindTooltip(
+        tf('contextTooltip', {
+            label: t('contextHouse'),
+            height: HORIZON_HOUSE_H,
+            distance: HORIZON_REF_DIST
+        }),
+        { direction: 'top', offset: [0, -8] }
+      );
+
+    L.marker([treePoint.lat, treePoint.lon], {
+        icon: makeContextIcon('🌳'),
+        zIndexOffset: 250
+    }).addTo(contextGroup)
+      .bindTooltip(
+        tf('contextTooltip', {
+            label: t('contextTree'),
+            height: HORIZON_TREE_H,
+            distance: HORIZON_REF_DIST
+        }),
+        { direction: 'top', offset: [0, -8] }
+      );
+}
+
 function redrawAll() {
     drawTurbines();
     drawNoiseContours();
     drawSafetyZones();
     drawA2(); // re-draw to pick up translated tooltip
     drawSelectionLines();
+    drawContextReferences();
 }
 redrawAll();
 
@@ -1279,6 +1362,7 @@ function buildControls() {
     document.getElementById('lbl-noise').querySelector('span').textContent    = t('layerNoise');
     document.getElementById('lbl-safety').querySelector('span').textContent   = t('layerSafety');
     document.getElementById('lbl-a2').querySelector('span').textContent       = t('layerA2');
+    document.getElementById('lbl-context').querySelector('span').textContent  = t('layerContext');
 
     document.getElementById('norm-1').textContent = t('norm1');
     document.getElementById('norm-2').textContent = t('norm2');
@@ -1347,6 +1431,11 @@ document.getElementById('toggle-safety').addEventListener('change', e => {
     updateUrlState();
 });
 document.getElementById('toggle-a2').addEventListener('change', e => {
+    syncLayerVisibility();
+    refreshCurrentReport();
+    updateUrlState();
+});
+document.getElementById('toggle-context').addEventListener('change', e => {
     syncLayerVisibility();
     refreshCurrentReport();
     updateUrlState();
@@ -1427,6 +1516,7 @@ function placeClickMarker(lat, lon) {
     }).addTo(map);
     lastClickedLatLon = { lat, lon };
     drawSelectionLines();
+    drawContextReferences();
     updateUrlState();
 }
 

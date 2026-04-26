@@ -684,7 +684,7 @@ function renderHorizonSVG(lat, lon) {
         // Tree: bearing ≈ 15°, crown half-width = 4.5, trunk width = 1.5
         const tx = 15, tHalfW = 4.5, trunkW = 1.5;
         const treeTrunkY = groundY - treeTrunkElev * scale;
-        const treeRoofY  = groundY - treeTopElev   * scale;
+        const treeCrownY = groundY - treeTopElev   * scale;
         // Trunk (rectangle)
         svg += `<rect x="${(tx - trunkW / 2).toFixed(2)}" y="${treeTrunkY.toFixed(2)}"` +
                ` width="${trunkW}" height="${(groundY - treeTrunkY).toFixed(2)}"` +
@@ -692,7 +692,7 @@ function renderHorizonSVG(lat, lon) {
         // Crown (filled triangle)
         svg += `<polygon points="${(tx - tHalfW).toFixed(2)},${treeTrunkY.toFixed(2)}` +
                ` ${(tx + tHalfW).toFixed(2)},${treeTrunkY.toFixed(2)}` +
-               ` ${tx},${treeRoofY.toFixed(2)}"` +
+               ` ${tx},${treeCrownY.toFixed(2)}"` +
                ` fill="#2e7d32" stroke="#1b5e20" stroke-width="0.4" opacity="0.85"/>`;
     }
 

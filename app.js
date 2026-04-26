@@ -666,19 +666,21 @@ function renderHorizonSVG(lat, lon) {
         const gap         = rotorRnear + 4;   // clear rotor disc edge plus a small margin
 
         // Try placing to the right of the nearest turbine; fall back to the left if near the edge.
-        let hx, tx;
-        const nb = nearestItem.bearing;
-        if (nb + gap + 18 <= 356) {
-            hx = nb + gap;
-            tx = nb + gap + 12;
-        } else if (nb - gap - 18 >= 4) {
-            tx = nb - gap;
-            hx = nb - gap - 12;
+        let houseBearing, treeBearing;
+        const nearestBearing = nearestItem.bearing;
+        if (nearestBearing + gap + 18 <= 356) {
+            houseBearing = nearestBearing + gap;
+            treeBearing  = nearestBearing + gap + 12;
+        } else if (nearestBearing - gap - 18 >= 4) {
+            treeBearing  = nearestBearing - gap;
+            houseBearing = nearestBearing - gap - 12;
         } else {
-            hx = 5;
-            tx = 18;
+            houseBearing = 5;
+            treeBearing  = 18;
         }
 
+        const hx = houseBearing;
+        const tx = treeBearing;
         const hw = 8;
         const houseWallY = groundY - houseWallElev * scale;
         const houseRoofY = groundY - houseTopElev  * scale;

@@ -79,7 +79,6 @@ const I18N = {
         landscapeTitle:  '🌆 Landschap & zichtbaarheid',
         landscapeNote:   'Schijnbare hoogte is een eenvoudige geometrische schatting op basis van tiphoogte en afstand. Werkelijke zichtbaarheid hangt ook sterk af van bebouwing, bomen, weersomstandigheden en exacte positie. Formeel landschapsonderzoek volgt in MER.',
         apparentHeight:  'schijnbare hoogte',
-        moonCompare:     'x volle maan',
         energyTitle:     '⚡ Energieopbrengst (per optie)',
         thMWh:           'MWh/jr',
         thHH:            'Huishoudens',
@@ -112,8 +111,8 @@ const I18N = {
 
         // Horizon silhouette
         horizonTitle:    '🔭 Horizonsilhouet',
-        horizonNote:     'Schematische weergave van de hoekgroottes op basis van geometrische berekening. Naast de dichtstbijzijnde windmolen zijn een referentie-rijtjeshuis (7 m) en referentiepopulier (15 m) op 50 m afstand getoond. Schaal is automatisch aangepast aan het hoogste object. Werkelijke zichtbaarheid hangt ook af van weersomstandigheden en exacte positie.',
-        horizonRefLabel: 'Ter vergelijking naast dichtstbijzijnde molen: 🏠 rijtjeshuis 7 m en 🌳 populier 15 m op 50 m afstand',
+        horizonNote:     'Schematische weergave van de hoekgroottes op basis van geometrische berekening. Een referentie-rijtjeshuis (7 m) en referentiepopulier (15 m) op 50 m afstand staan net buiten de windmolengroep. Het beeld is gecentreerd op de dichtstbijzijnde windmolen. Schaal is automatisch aangepast aan het hoogste object. Werkelijke zichtbaarheid hangt ook af van weersomstandigheden en exacte positie.',
+        horizonRefLabel: 'Ter vergelijking buiten de windmolengroep: 🏠 rijtjeshuis 7 m en 🌳 populier 15 m op 50 m afstand',
     },
 
     en: {
@@ -176,7 +175,6 @@ const I18N = {
         landscapeTitle:  '🌆 Landscape & visibility',
         landscapeNote:   'Apparent height is a simple geometric estimate based on tip height and distance. Actual visibility also depends strongly on buildings, trees, weather and the exact viewing position. Formal landscape assessment will follow in the EIA.',
         apparentHeight:  'apparent height',
-        moonCompare:     'x full moon',
         energyTitle:     '⚡ Energy output (per alternative)',
         thMWh:           'MWh/yr',
         thHH:            'Households',
@@ -205,8 +203,8 @@ const I18N = {
 
         // Horizon silhouette
         horizonTitle:    '🔭 Horizon silhouette',
-        horizonNote:     'Schematic view of turbine angular sizes based on geometric calculation. A reference Dutch terraced house (7 m) and poplar tree (15 m) at 50 m distance are shown next to the nearest turbine. Scale is auto-adjusted to the tallest object. Actual visibility also depends on weather conditions and exact position.',
-        horizonRefLabel: 'For comparison next to nearest turbine: 🏠 terraced house 7 m and 🌳 poplar 15 m at 50 m distance',
+        horizonNote:     'Schematic view of turbine angular sizes based on geometric calculation. A reference Dutch terraced house (7 m) and poplar tree (15 m) at 50 m distance are shown just outside the turbine group. The view is centered on the nearest turbine. Scale is auto-adjusted to the tallest object. Actual visibility also depends on weather conditions and exact position.',
+        horizonRefLabel: 'For comparison outside the turbine group: 🏠 terraced house 7 m and 🌳 poplar 15 m at 50 m distance',
     }
 };
 
@@ -570,8 +568,8 @@ function bearingDegrees(lat1, lon1, lat2, lon2) {
 }
 
 /**
- * Build a 360° panoramic SVG showing the angular silhouette of all active
- * wind turbines as seen from the observer at (lat, lon).
+ * Build an SVG showing the angular silhouette of all active wind turbines as
+ * seen from the observer at (lat, lon), centred on the nearest turbine.
  *
  * Each turbine is drawn as a colour-coded tower line topped by a rotor disc
  * at its geometrically correct bearing and elevation angles. The vertical
@@ -585,7 +583,6 @@ function renderHorizonSVG(lat, lon) {
     // Collect silhouette data for every turbine in every active alternative.
     const items       = [];
     let maxTipElev    = 0;
-    let nearestDist   = Infinity;
 
     for (const [key, opt] of Object.entries(TURBINE_OPTIONS)) {
         if (!activeOptions[key]) continue;
@@ -599,11 +596,17 @@ function renderHorizonSVG(lat, lon) {
             const rotorRadAng  = (rotorTopElev - rotorBotElev) / 2;
             items.push({ opt, dist, bearing, tipElev, hubElev, rotorRadAng });
             if (tipElev > maxTipElev) maxTipElev = tipElev;
-            if (dist < nearestDist) { nearestDist = dist; }
         }
     }
 
     if (items.length === 0) return null;
+
+    const nearestItem = items.reduce((a, b) => a.dist < b.dist ? a : b);
+    const centerBearing = nearestItem.bearing;
+    const relativeBearing = bearing => ((bearing - centerBearing + 540) % 360) - 180;
+    for (const item of items) {
+        item.relBearing = relativeBearing(item.bearing);
+    }
 
     // Reference objects drawn at fixed distance for visual comparison.
     const REF_DIST      = 50;   // metres – representative near-field distance
@@ -624,10 +627,18 @@ function renderHorizonSVG(lat, lon) {
     const scaleMargFactor   = 1.15; // tallest object fills 1/1.15 ≈ 87 % of usable height
     const minElevDeg        = 1.0;  // minimum angular scale [degrees] to avoid flat drawings
     const minRotorRadiusPx  = 0.8;  // minimum rotor radius in SVG units for legibility
+    const refLane           = 30;   // reserved margin on both sides for reference objects
+    const minHalfSpanDeg    = 4;    // minimum half-width in angular degrees around the centre turbine
     const usableH = groundY - skyPadding;   // px available for turbine drawings
     // Auto-scale: include reference tree so it never overflows the SVG.
     const maxElev = Math.max(maxTipElev, treeTopElev);
     const scale   = usableH / Math.max(maxElev * scaleMargFactor, minElevDeg);
+    const maxRotorRadius = Math.max(...items.map(item => Math.max(item.rotorRadAng * scale, minRotorRadiusPx)));
+    const maxAbsRelBearing = Math.max(...items.map(item => Math.abs(item.relBearing)));
+    const halfDrawableW = Math.max(1, svgW / 2 - refLane - maxRotorRadius - 2);
+    const xScale = halfDrawableW / Math.max(maxAbsRelBearing, minHalfSpanDeg);
+    const centerX = svgW / 2;
+    const toX = relBearing => centerX + relBearing * xScale;
 
     let svg = `<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg"` +
               ` style="width:100%;height:auto;display:block;border-radius:6px;overflow:hidden;">`;
@@ -641,61 +652,40 @@ function renderHorizonSVG(lat, lon) {
     // Ground strip.
     svg += `<rect x="0" y="${groundY}" width="${svgW}" height="${svgH - groundY}" fill="#8cb87c"/>`;
     svg += `<line x1="0" y1="${groundY}" x2="${svgW}" y2="${groundY}" stroke="#5a8a4a" stroke-width="0.8"/>`;
+    svg += `<line x1="${centerX}" y1="3" x2="${centerX}" y2="${groundY}" stroke="#ffffff" stroke-width="0.8" opacity="0.35" stroke-dasharray="2 2"/>`;
 
-    // Compass ticks and cardinal labels.
-    for (const { x, label } of [
-        { x: 0, label: 'N' }, { x: 90, label: 'E' },
-        { x: 180, label: 'S' }, { x: 270, label: 'W' }, { x: 360, label: 'N' }
-    ]) {
-        svg += `<line x1="${x}" y1="${groundY}" x2="${x}" y2="${groundY + 3}" stroke="#5a8a4a" stroke-width="0.8"/>`;
-        svg += `<text x="${x}" y="${svgH - 1}" text-anchor="middle" font-size="6.5"` +
-               ` font-family="sans-serif" fill="#3d6e30">${label}</text>`;
-    }
-    // Minor ticks at intercardinal points.
-    for (const x of [45, 135, 225, 315]) {
-        svg += `<line x1="${x}" y1="${groundY}" x2="${x}" y2="${groundY + 2}" stroke="#7aaa60" stroke-width="0.5"/>`;
-    }
+    // Draw turbines back-to-front so nearer turbines render on top.
+    const sorted = items.slice().sort((a, b) => b.dist - a.dist);
+    const renderedItems = sorted.map(item => ({
+        ...item,
+        x: toX(item.relBearing),
+        rotorR: Math.max(item.rotorRadAng * scale, minRotorRadiusPx)
+    }));
+    const minTurbineLeft = Math.min(...renderedItems.map(item => item.x - item.rotorR));
+    const maxTurbineRight = Math.max(...renderedItems.map(item => item.x + item.rotorR));
 
     // Reference silhouettes: Dutch-style house (7 m) and poplar tree (15 m) at REF_DIST = 50 m.
-    // Positioned dynamically next to the nearest turbine so the height comparison is intuitive
-    // while not overlapping the turbine silhouette itself.
+    // Keep them just outside the full turbine group so they compare against the whole silhouette.
     {
-        // Find nearest turbine and its SVG x position to anchor the reference objects.
-        const nearestItem = items.reduce((a, b) => a.dist < b.dist ? a : b);
-        const rotorRnear  = Math.max(nearestItem.rotorRadAng * scale, minRotorRadiusPx);
-        const gap         = rotorRnear + 4;   // clear rotor disc edge plus a small margin
-
-        // Try placing to the right of the nearest turbine; fall back to the left if near the edge.
-        let houseBearing, treeBearing;
-        const nearestBearing = nearestItem.bearing;
-        if (nearestBearing + gap + 18 <= 356) {
-            houseBearing = nearestBearing + gap;
-            treeBearing  = nearestBearing + gap + 12;
-        } else if (nearestBearing - gap - 18 >= 4) {
-            treeBearing  = nearestBearing - gap;
-            houseBearing = nearestBearing - gap - 12;
-        } else {
-            houseBearing = 5;
-            treeBearing  = 18;
-        }
-
-        const hx = houseBearing;
-        const tx = treeBearing;
+        const refGap = 6;
         const hw = 8;
+        const trunkW = 1.2;
+        const crownRx = 2.5;
+        const houseHalfW = hw / 2 + 1;
+        const treeHalfW = Math.max(trunkW / 2, crownRx);
+        const hx = Math.max(houseHalfW + 2, minTurbineLeft - refGap - houseHalfW);
+        const tx = Math.min(svgW - treeHalfW - 2, maxTurbineRight + refGap + treeHalfW);
         const houseWallY = groundY - houseWallElev * scale;
         const houseRoofY = groundY - houseTopElev  * scale;
 
         // Dutch brick house: warm brick-red walls, steep dark clay-tile roof, chimney.
-        // Walls
         svg += `<rect x="${(hx - hw / 2).toFixed(2)}" y="${houseWallY.toFixed(2)}"` +
                ` width="${hw}" height="${(groundY - houseWallY).toFixed(2)}"` +
                ` fill="#b84c26" stroke="#7a2f10" stroke-width="0.3" opacity="0.9"/>`;
-        // Steep pitched roof (dark clay tiles, slightly wider than walls for eaves)
         svg += `<polygon points="${(hx - hw / 2 - 1).toFixed(2)},${houseWallY.toFixed(2)}` +
                ` ${(hx + hw / 2 + 1).toFixed(2)},${houseWallY.toFixed(2)}` +
                ` ${hx},${houseRoofY.toFixed(2)}"` +
                ` fill="#2e1508" stroke="#1a0c04" stroke-width="0.3" opacity="0.9"/>`;
-        // Chimney (offset from ridge toward right side of roof)
         const chimneyX    = hx + 2;
         const chimneyTopY = houseRoofY + (houseWallY - houseRoofY) * 0.45;
         svg += `<rect x="${(chimneyX - 0.7).toFixed(2)}" y="${chimneyTopY.toFixed(2)}"` +
@@ -703,34 +693,28 @@ function renderHorizonSVG(lat, lon) {
                ` fill="#8c3b1e" stroke="#5a2010" stroke-width="0.2" opacity="0.9"/>`;
 
         // Dutch poplar tree: slender trunk, tall narrow elliptical crown typical of Dutch polders.
-        const trunkW     = 1.2;
         const treeTrunkY = groundY - treeTrunkElev * scale;
         const treeCrownY = groundY - treeTopElev   * scale;
         const crownCy    = (treeTrunkY + treeCrownY) / 2;
         const crownRy    = (treeTrunkY - treeCrownY) / 2;
-        const crownRx    = 2.5;   // narrow for poplar silhouette
 
-        // Trunk
         svg += `<rect x="${(tx - trunkW / 2).toFixed(2)}" y="${treeTrunkY.toFixed(2)}"` +
                ` width="${trunkW}" height="${(groundY - treeTrunkY).toFixed(2)}"` +
                ` fill="#4a2e0e" stroke="none" opacity="0.9"/>`;
-        // Narrow elliptical crown
         svg += `<ellipse cx="${tx.toFixed(2)}" cy="${crownCy.toFixed(2)}"` +
                ` rx="${crownRx}" ry="${crownRy.toFixed(2)}"` +
                ` fill="#376b2a" stroke="#1e4a15" stroke-width="0.4" opacity="0.9"/>`;
     }
 
-    // Draw turbines back-to-front so nearer turbines render on top.
-    const sorted = items.slice().sort((a, b) => b.dist - a.dist);
-    for (const { opt, bearing, hubElev, rotorRadAng } of sorted) {
-        const bx     = bearing.toFixed(1);
+    for (const { opt, x, hubElev, rotorR } of renderedItems) {
+        const bx     = x.toFixed(1);
         const hubY   = (groundY - hubElev * scale).toFixed(1);
-        const rotorR = Math.max(rotorRadAng * scale, minRotorRadiusPx).toFixed(1);
+        const rotorRpx = rotorR.toFixed(1);
         // Tower: ground → hub centre.
         svg += `<line x1="${bx}" y1="${groundY}" x2="${bx}" y2="${hubY}"` +
                ` stroke="${opt.color}" stroke-width="1.5" opacity="0.9"/>`;
         // Rotor disc: circle at hub height.
-        svg += `<circle cx="${bx}" cy="${hubY}" r="${rotorR}"` +
+        svg += `<circle cx="${bx}" cy="${hubY}" r="${rotorRpx}"` +
                ` fill="${opt.color}" fill-opacity="0.3" stroke="${opt.color}" stroke-width="0.8" opacity="0.9"/>`;
     }
 
@@ -1633,10 +1617,9 @@ function updateInfoPanel(lat, lon) {
         if (!activeOptions[key]) continue;
         const nearestDist = Math.min(...opt.turbines.map(turbine => haversine(lat, lon, turbine.lat, turbine.lon)));
         const apparentDeg = apparentHeightDegrees(opt.tip_height, nearestDist);
-        const moonMultiple = apparentDeg / 0.5;
         html += `<div class="effect-row">
             <span class="effect-label" style="color:${opt.color};font-weight:700">${key}</span>
-            <span class="effect-value">${Math.round(nearestDist / 100) / 10} km | ${opt.tip_height} m ${t('tipHeight').toLowerCase()} | ~${apparentDeg.toFixed(1)}° ${t('apparentHeight')} (${moonMultiple.toFixed(1)} ${t('moonCompare')})</span>
+            <span class="effect-value">${Math.round(nearestDist / 100) / 10} km | ${opt.tip_height} m ${t('tipHeight').toLowerCase()} | ~${apparentDeg.toFixed(1)}° ${t('apparentHeight')}</span>
         </div>`;
     }
     html += `<div style="font-size:10px;color:#95a5a6;margin-top:3px;">${t('landscapeNote')}</div>

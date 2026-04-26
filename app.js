@@ -610,12 +610,16 @@ function renderHorizonSVG(lat, lon) {
     if (items.length === 0) return null;
 
     // SVG layout constants.
-    const svgW    = 360;
-    const groundY = 58;
-    const svgH    = 68;
-    const usableH = groundY - 4;   // 54 px for turbine drawings
-    // Auto-scale: tallest turbine fills ~87 % of usable height; minimum 1° to avoid flat drawings.
-    const scale   = usableH / Math.max(maxTipElev * 1.15, 1.0);
+    const svgW              = 360;
+    const groundY           = 58;   // y-coordinate of the ground line
+    const svgH              = 68;   // total SVG height (ground + compass label row)
+    const skyPadding        = 4;    // vertical gap above the tallest turbine [px]
+    const scaleMargFactor   = 1.15; // tallest turbine fills 1/1.15 ≈ 87 % of usable height
+    const minElevDeg        = 1.0;  // minimum angular scale [degrees] to avoid flat drawings
+    const minRotorRadiusPx  = 0.8;  // minimum rotor radius in SVG units for legibility
+    const usableH = groundY - skyPadding;   // px available for turbine drawings
+    // Auto-scale: tallest turbine fills ~87 % of usable height.
+    const scale   = usableH / Math.max(maxTipElev * scaleMargFactor, minElevDeg);
 
     let svg = `<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg"` +
               ` style="width:100%;height:auto;display:block;border-radius:6px;overflow:hidden;">`;
@@ -649,7 +653,7 @@ function renderHorizonSVG(lat, lon) {
     for (const { opt, bearing, hubElev, rotorRadAng } of sorted) {
         const bx     = bearing.toFixed(1);
         const hubY   = (groundY - hubElev * scale).toFixed(1);
-        const rotorR = Math.max(rotorRadAng * scale, 0.8).toFixed(1);
+        const rotorR = Math.max(rotorRadAng * scale, minRotorRadiusPx).toFixed(1);
         // Tower: ground → hub centre.
         svg += `<line x1="${bx}" y1="${groundY}" x2="${bx}" y2="${hubY}"` +
                ` stroke="${opt.color}" stroke-width="1.5" opacity="0.9"/>`;

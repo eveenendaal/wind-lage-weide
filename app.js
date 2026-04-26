@@ -112,7 +112,8 @@ const I18N = {
 
         // Horizon silhouette
         horizonTitle:    '🔭 Horizonsilhouet',
-        horizonNote:     'Schematische weergave van de hoekgroottes op basis van geometrische berekening. Schaal is automatisch aangepast aan de actieve opties. Werkelijke zichtbaarheid is afhankelijk van bebouwing, bomen en weersomstandigheden.',
+        horizonNote:     'Schematische weergave van de hoekgroottes op basis van geometrische berekening. Links zijn een referentiehuis (7 m) en referentieboom (15 m) op 50 m afstand getoond. Schaal is automatisch aangepast aan het hoogste object. Werkelijke zichtbaarheid hangt ook af van weersomstandigheden en exacte positie.',
+        horizonRefLabel: 'Links ter vergelijking: 🏠 huis 7 m en 🌳 boom 15 m op 50 m afstand',
         streetViewBtn:   'Open Google Street View',
         streetViewNote:  'Street View toont het huidige landschap; toekomstige turbines zijn niet zichtbaar.',
     },
@@ -206,7 +207,8 @@ const I18N = {
 
         // Horizon silhouette
         horizonTitle:    '🔭 Horizon silhouette',
-        horizonNote:     'Schematic view of turbine angular sizes based on geometric calculation. Scale is auto-adjusted to the active alternatives. Actual visibility depends on buildings, trees and weather conditions.',
+        horizonNote:     'Schematic view of turbine angular sizes based on geometric calculation. A reference house (7 m) and tree (15 m) at 50 m distance are shown on the left. Scale is auto-adjusted to the tallest object. Actual visibility also depends on weather conditions and exact position.',
+        horizonRefLabel: 'Left for comparison: 🏠 house 7 m and 🌳 tree 15 m at 50 m distance',
         streetViewBtn:   'Open Google Street View',
         streetViewNote:  'Street View shows the current landscape; future turbines are not visible.',
     }
@@ -609,17 +611,29 @@ function renderHorizonSVG(lat, lon) {
 
     if (items.length === 0) return null;
 
+    // Reference objects drawn at fixed distance for visual comparison.
+    const REF_DIST      = 50;   // metres – representative near-field distance
+    const HOUSE_H       = 7;    // total house height (walls + roof) [m]
+    const HOUSE_WALL_H  = 5;    // wall-only height [m]
+    const TREE_H        = 15;   // total tree height [m]
+    const TREE_TRUNK_H  = 3;    // trunk-only height [m]
+    const houseTopElev  = elevationDegrees(HOUSE_H,     REF_DIST);
+    const houseWallElev = elevationDegrees(HOUSE_WALL_H, REF_DIST);
+    const treeTopElev   = elevationDegrees(TREE_H,      REF_DIST);
+    const treeTrunkElev = elevationDegrees(TREE_TRUNK_H, REF_DIST);
+
     // SVG layout constants.
     const svgW              = 360;
     const groundY           = 58;   // y-coordinate of the ground line
     const svgH              = 68;   // total SVG height (ground + compass label row)
     const skyPadding        = 4;    // vertical gap above the tallest turbine [px]
-    const scaleMargFactor   = 1.15; // tallest turbine fills 1/1.15 ≈ 87 % of usable height
+    const scaleMargFactor   = 1.15; // tallest object fills 1/1.15 ≈ 87 % of usable height
     const minElevDeg        = 1.0;  // minimum angular scale [degrees] to avoid flat drawings
     const minRotorRadiusPx  = 0.8;  // minimum rotor radius in SVG units for legibility
     const usableH = groundY - skyPadding;   // px available for turbine drawings
-    // Auto-scale: tallest turbine fills ~87 % of usable height.
-    const scale   = usableH / Math.max(maxTipElev * scaleMargFactor, minElevDeg);
+    // Auto-scale: include reference tree so it never overflows the SVG.
+    const maxElev = Math.max(maxTipElev, treeTopElev);
+    const scale   = usableH / Math.max(maxElev * scaleMargFactor, minElevDeg);
 
     let svg = `<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg"` +
               ` style="width:100%;height:auto;display:block;border-radius:6px;overflow:hidden;">`;
@@ -646,6 +660,40 @@ function renderHorizonSVG(lat, lon) {
     // Minor ticks at intercardinal points.
     for (const x of [45, 135, 225, 315]) {
         svg += `<line x1="${x}" y1="${groundY}" x2="${x}" y2="${groundY + 2}" stroke="#7aaa60" stroke-width="0.5"/>`;
+    }
+
+    // Reference silhouettes: house (7 m) and tree (15 m) at REF_DIST = 50 m.
+    // Drawn at fixed bearings near North so they are clear comparison anchors.
+    // Turbines rendered afterwards will appear in front if they share a bearing.
+    {
+        // House: bearing ≈ 4°, width = 7 SVG units
+        const hx = 4, hw = 7;
+        const houseWallY = groundY - houseWallElev * scale;
+        const houseRoofY = groundY - houseTopElev  * scale;
+        // Walls (rectangle)
+        svg += `<rect x="${(hx - hw / 2).toFixed(2)}" y="${houseWallY.toFixed(2)}"` +
+               ` width="${hw}" height="${(groundY - houseWallY).toFixed(2)}"` +
+               ` fill="#8a8a8a" stroke="#555" stroke-width="0.3" opacity="0.85"/>`;
+        // Roof (triangle)
+        svg += `<polygon points="${(hx - hw / 2).toFixed(2)},${houseWallY.toFixed(2)}` +
+               ` ${(hx + hw / 2).toFixed(2)},${houseWallY.toFixed(2)}` +
+               ` ${hx},${houseRoofY.toFixed(2)}"` +
+               ` fill="#6e6e6e" stroke="#444" stroke-width="0.3" opacity="0.85"/>`;
+    }
+    {
+        // Tree: bearing ≈ 15°, crown half-width = 4.5, trunk width = 1.5
+        const tx = 15, tHalfW = 4.5, trunkW = 1.5;
+        const treeTrunkY = groundY - treeTrunkElev * scale;
+        const treeRoofY  = groundY - treeTopElev   * scale;
+        // Trunk (rectangle)
+        svg += `<rect x="${(tx - trunkW / 2).toFixed(2)}" y="${treeTrunkY.toFixed(2)}"` +
+               ` width="${trunkW}" height="${(groundY - treeTrunkY).toFixed(2)}"` +
+               ` fill="#5c3d1a" stroke="none" opacity="0.85"/>`;
+        // Crown (filled triangle)
+        svg += `<polygon points="${(tx - tHalfW).toFixed(2)},${treeTrunkY.toFixed(2)}` +
+               ` ${(tx + tHalfW).toFixed(2)},${treeTrunkY.toFixed(2)}` +
+               ` ${tx},${treeRoofY.toFixed(2)}"` +
+               ` fill="#2e7d32" stroke="#1b5e20" stroke-width="0.4" opacity="0.85"/>`;
     }
 
     // Draw turbines back-to-front so nearer turbines render on top.
@@ -1582,7 +1630,7 @@ function updateInfoPanel(lat, lon) {
         <div style="margin-top:6px;display:flex;justify-content:flex-end;">
             <a href="${svUrl}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#2980b9;text-decoration:none;">🗺️ ${t('streetViewBtn')} ↗</a>
         </div>
-        <div style="font-size:10px;color:#95a5a6;margin-top:3px;">${t('horizonNote')}<br>${t('streetViewNote')}</div>
+        <div style="font-size:10px;color:#95a5a6;margin-top:3px;">${t('horizonRefLabel')}<br>${t('horizonNote')}<br>${t('streetViewNote')}</div>
     </div>`;
     }
 

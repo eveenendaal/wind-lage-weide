@@ -109,6 +109,11 @@ const I18N = {
         safetyZone:      'veiligheidszone',
         // km/visibility
         visLabel:        'km | tiphoogte',
+
+        // Horizon silhouette
+        horizonTitle:    '🔭 Horizonsilhouet',
+        horizonNote:     'Schematische weergave van de hoekgroottes op basis van geometrische berekening. Links zijn een referentiehuis (7 m) en referentieboom (15 m) op 50 m afstand getoond. Schaal is automatisch aangepast aan het hoogste object. Werkelijke zichtbaarheid hangt ook af van weersomstandigheden en exacte positie.',
+        horizonRefLabel: 'Links ter vergelijking: 🏠 huis 7 m en 🌳 boom 15 m op 50 m afstand',
     },
 
     en: {
@@ -197,6 +202,11 @@ const I18N = {
         tipHeight:       'Tip height',
         safetyZone:      'safety zone',
         visLabel:        'km | tip height',
+
+        // Horizon silhouette
+        horizonTitle:    '🔭 Horizon silhouette',
+        horizonNote:     'Schematic view of turbine angular sizes based on geometric calculation. A reference house (7 m) and tree (15 m) at 50 m distance are shown on the left. Scale is auto-adjusted to the tallest object. Actual visibility also depends on weather conditions and exact position.',
+        horizonRefLabel: 'Left for comparison: 🏠 house 7 m and 🌳 tree 15 m at 50 m distance',
     }
 };
 
@@ -526,6 +536,176 @@ function nearestPointOnPolyline(lat, lon, polyline) {
 function apparentHeightDegrees(heightMetres, distanceMetres) {
     const d = Math.max(distanceMetres, 1);
     return 2 * Math.atan(heightMetres / (2 * d)) * 180 / Math.PI;
+}
+
+/**
+ * Elevation angle from the observer's eye level (ground) to the top of an
+ * object of given height at a given horizontal distance.
+ *
+ * @param {number} heightMetres   – object height [m]
+ * @param {number} distanceMetres – horizontal distance [m]
+ * @returns {number} elevation angle [degrees]
+ */
+function elevationDegrees(heightMetres, distanceMetres) {
+    const d = Math.max(distanceMetres, 1);
+    return Math.atan(heightMetres / d) * 180 / Math.PI;
+}
+
+/**
+ * True north bearing from point 1 to point 2, returned as [0, 360).
+ *
+ * @param {number} lat1 – observer latitude [degrees]
+ * @param {number} lon1 – observer longitude [degrees]
+ * @param {number} lat2 – target latitude [degrees]
+ * @param {number} lon2 – target longitude [degrees]
+ * @returns {number} bearing [degrees, 0 = N, 90 = E, 180 = S, 270 = W]
+ */
+function bearingDegrees(lat1, lon1, lat2, lon2) {
+    const phi1 = lat1 * Math.PI / 180;
+    const phi2 = lat2 * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const y    = Math.sin(dLon) * Math.cos(phi2);
+    const x    = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLon);
+    return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
+
+/**
+ * Build a 360° panoramic SVG showing the angular silhouette of all active
+ * wind turbines as seen from the observer at (lat, lon).
+ *
+ * Each turbine is drawn as a colour-coded tower line topped by a rotor disc
+ * at its geometrically correct bearing and elevation angles. The vertical
+ * scale is auto-fitted to the tallest visible turbine.
+ *
+ * @param {number} lat – observer latitude [degrees]
+ * @param {number} lon – observer longitude [degrees]
+ * @returns {string|null} SVG markup string, or null when no turbine alternatives are active.
+ */
+function renderHorizonSVG(lat, lon) {
+    // Collect silhouette data for every turbine in every active alternative.
+    const items       = [];
+    let maxTipElev    = 0;
+    let nearestDist   = Infinity;
+
+    for (const [key, opt] of Object.entries(TURBINE_OPTIONS)) {
+        if (!activeOptions[key]) continue;
+        for (const turbine of opt.turbines) {
+            const dist        = haversine(lat, lon, turbine.lat, turbine.lon);
+            const bearing     = bearingDegrees(lat, lon, turbine.lat, turbine.lon);
+            const tipElev     = elevationDegrees(opt.tip_height, dist);
+            const hubElev     = elevationDegrees(opt.hub_height, dist);
+            const rotorTopElev = elevationDegrees(opt.hub_height + opt.rotor_diam / 2, dist);
+            const rotorBotElev = Math.max(0, elevationDegrees(opt.hub_height - opt.rotor_diam / 2, dist));
+            const rotorRadAng  = (rotorTopElev - rotorBotElev) / 2;
+            items.push({ opt, dist, bearing, tipElev, hubElev, rotorRadAng });
+            if (tipElev > maxTipElev) maxTipElev = tipElev;
+            if (dist < nearestDist) { nearestDist = dist; }
+        }
+    }
+
+    if (items.length === 0) return null;
+
+    // Reference objects drawn at fixed distance for visual comparison.
+    const REF_DIST      = 50;   // metres – representative near-field distance
+    const HOUSE_H       = 7;    // total house height (walls + roof) [m]
+    const HOUSE_WALL_H  = 5;    // wall-only height [m]
+    const TREE_H        = 15;   // total tree height [m]
+    const TREE_TRUNK_H  = 3;    // trunk-only height [m]
+    const houseTopElev  = elevationDegrees(HOUSE_H,     REF_DIST);
+    const houseWallElev = elevationDegrees(HOUSE_WALL_H, REF_DIST);
+    const treeTopElev   = elevationDegrees(TREE_H,      REF_DIST);
+    const treeTrunkElev = elevationDegrees(TREE_TRUNK_H, REF_DIST);
+
+    // SVG layout constants.
+    const svgW              = 360;
+    const groundY           = 58;   // y-coordinate of the ground line
+    const svgH              = 68;   // total SVG height (ground + compass label row)
+    const skyPadding        = 4;    // vertical gap above the tallest turbine [px]
+    const scaleMargFactor   = 1.15; // tallest object fills 1/1.15 ≈ 87 % of usable height
+    const minElevDeg        = 1.0;  // minimum angular scale [degrees] to avoid flat drawings
+    const minRotorRadiusPx  = 0.8;  // minimum rotor radius in SVG units for legibility
+    const usableH = groundY - skyPadding;   // px available for turbine drawings
+    // Auto-scale: include reference tree so it never overflows the SVG.
+    const maxElev = Math.max(maxTipElev, treeTopElev);
+    const scale   = usableH / Math.max(maxElev * scaleMargFactor, minElevDeg);
+
+    let svg = `<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg"` +
+              ` style="width:100%;height:auto;display:block;border-radius:6px;overflow:hidden;">`;
+
+    // Sky gradient background.
+    svg += `<defs><linearGradient id="hzSky" x1="0" y1="0" x2="0" y2="1">` +
+           `<stop offset="0%" stop-color="#b8d9ed"/>` +
+           `<stop offset="100%" stop-color="#ddf0fb"/>` +
+           `</linearGradient></defs>`;
+    svg += `<rect x="0" y="0" width="${svgW}" height="${groundY}" fill="url(#hzSky)"/>`;
+    // Ground strip.
+    svg += `<rect x="0" y="${groundY}" width="${svgW}" height="${svgH - groundY}" fill="#8cb87c"/>`;
+    svg += `<line x1="0" y1="${groundY}" x2="${svgW}" y2="${groundY}" stroke="#5a8a4a" stroke-width="0.8"/>`;
+
+    // Compass ticks and cardinal labels.
+    for (const { x, label } of [
+        { x: 0, label: 'N' }, { x: 90, label: 'E' },
+        { x: 180, label: 'S' }, { x: 270, label: 'W' }, { x: 360, label: 'N' }
+    ]) {
+        svg += `<line x1="${x}" y1="${groundY}" x2="${x}" y2="${groundY + 3}" stroke="#5a8a4a" stroke-width="0.8"/>`;
+        svg += `<text x="${x}" y="${svgH - 1}" text-anchor="middle" font-size="6.5"` +
+               ` font-family="sans-serif" fill="#3d6e30">${label}</text>`;
+    }
+    // Minor ticks at intercardinal points.
+    for (const x of [45, 135, 225, 315]) {
+        svg += `<line x1="${x}" y1="${groundY}" x2="${x}" y2="${groundY + 2}" stroke="#7aaa60" stroke-width="0.5"/>`;
+    }
+
+    // Reference silhouettes: house (7 m) and tree (15 m) at REF_DIST = 50 m.
+    // Drawn at fixed bearings near North so they are clear comparison anchors.
+    // Turbines rendered afterwards will appear in front if they share a bearing.
+    {
+        // House: bearing ≈ 4°, width = 7 SVG units
+        const hx = 4, hw = 7;
+        const houseWallY = groundY - houseWallElev * scale;
+        const houseRoofY = groundY - houseTopElev  * scale;
+        // Walls (rectangle)
+        svg += `<rect x="${(hx - hw / 2).toFixed(2)}" y="${houseWallY.toFixed(2)}"` +
+               ` width="${hw}" height="${(groundY - houseWallY).toFixed(2)}"` +
+               ` fill="#8a8a8a" stroke="#555" stroke-width="0.3" opacity="0.85"/>`;
+        // Roof (triangle)
+        svg += `<polygon points="${(hx - hw / 2).toFixed(2)},${houseWallY.toFixed(2)}` +
+               ` ${(hx + hw / 2).toFixed(2)},${houseWallY.toFixed(2)}` +
+               ` ${hx},${houseRoofY.toFixed(2)}"` +
+               ` fill="#6e6e6e" stroke="#444" stroke-width="0.3" opacity="0.85"/>`;
+    }
+    {
+        // Tree: bearing ≈ 15°, crown half-width = 4.5, trunk width = 1.5
+        const tx = 15, tHalfW = 4.5, trunkW = 1.5;
+        const treeTrunkY = groundY - treeTrunkElev * scale;
+        const treeCrownY = groundY - treeTopElev   * scale;
+        // Trunk (rectangle)
+        svg += `<rect x="${(tx - trunkW / 2).toFixed(2)}" y="${treeTrunkY.toFixed(2)}"` +
+               ` width="${trunkW}" height="${(groundY - treeTrunkY).toFixed(2)}"` +
+               ` fill="#5c3d1a" stroke="none" opacity="0.85"/>`;
+        // Crown (filled triangle)
+        svg += `<polygon points="${(tx - tHalfW).toFixed(2)},${treeTrunkY.toFixed(2)}` +
+               ` ${(tx + tHalfW).toFixed(2)},${treeTrunkY.toFixed(2)}` +
+               ` ${tx},${treeCrownY.toFixed(2)}"` +
+               ` fill="#2e7d32" stroke="#1b5e20" stroke-width="0.4" opacity="0.85"/>`;
+    }
+
+    // Draw turbines back-to-front so nearer turbines render on top.
+    const sorted = items.slice().sort((a, b) => b.dist - a.dist);
+    for (const { opt, bearing, hubElev, rotorRadAng } of sorted) {
+        const bx     = bearing.toFixed(1);
+        const hubY   = (groundY - hubElev * scale).toFixed(1);
+        const rotorR = Math.max(rotorRadAng * scale, minRotorRadiusPx).toFixed(1);
+        // Tower: ground → hub centre.
+        svg += `<line x1="${bx}" y1="${groundY}" x2="${bx}" y2="${hubY}"` +
+               ` stroke="${opt.color}" stroke-width="1.5" opacity="0.9"/>`;
+        // Rotor disc: circle at hub height.
+        svg += `<circle cx="${bx}" cy="${hubY}" r="${rotorR}"` +
+               ` fill="${opt.color}" fill-opacity="0.3" stroke="${opt.color}" stroke-width="0.8" opacity="0.9"/>`;
+    }
+
+    svg += '</svg>';
+    return svg;
 }
 
 
@@ -1432,6 +1612,16 @@ function updateInfoPanel(lat, lon) {
     html += `<div style="font-size:10px;color:#95a5a6;margin-top:3px;">${t('landscapeNote')}</div>
         </div>
     </div>`;
+
+    /* ── Horizon silhouette ── */
+    const horizonSVG = renderHorizonSVG(lat, lon);
+    if (horizonSVG) {
+        html += `<div class="info-section">
+        <h4>${t('horizonTitle')}</h4>
+        ${horizonSVG}
+        <div style="font-size:10px;color:#95a5a6;margin-top:3px;">${t('horizonRefLabel')}<br>${t('horizonNote')}</div>
+    </div>`;
+    }
 
     /* ── Energy output ── */
     html += `<div class="info-section">

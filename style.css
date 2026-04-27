@@ -201,6 +201,9 @@ body {
 #info-placeholder p     { font-size: 12px; color: #7f8c8d; line-height: 1.5; }
 
 
+/* ── Legend rows with color swatches ── */
+.legend-row { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+.legend-swatch { width: 24px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 
 
 

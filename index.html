@@ -82,8 +82,13 @@
      ═══════════════════════════════════════════════ -->
 <div id="info-panel">
     <div id="info-header">
-        <h2 id="info-header-title">📍 Effecten op locatie</h2>
-        <p  id="info-coords">Klik op de kaart om te beginnen</p>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <div style="flex: 1;">
+                <h2 id="info-header-title">📍 Effecten op locatie</h2>
+                <p  id="info-coords">Klik op de kaart om te beginnen</p>
+            </div>
+            <button id="btn-fullscreen" class="info-fullscreen-btn" style="display: none;">⛶</button>
+        </div>
     </div>
     <div id="info-body"></div>
 </div>

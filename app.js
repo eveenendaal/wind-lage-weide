@@ -314,12 +314,13 @@ function clearUrlState() {
 const TURBINE_OPTIONS = {
     A: {
         nameNl: 'Optie A', nameEn: 'Option A',
-        descNl: '7 kleine turbines (~2.5 MW)', descEn: '7 small turbines (~2.5 MW)',
+        descNl: '8 kleine turbines (~2.3 MW)', descEn: '8 small turbines (~2.3 MW)',
         LwA: 105,           // A-weighted sound power level [dB(A)]
-        capacity_mw: 2.5,   // Electrical capacity per turbine [MW]
-        hub_height: 100,    // Hub height above ground [m]
-        rotor_diam: 90,     // Rotor diameter [m]
-        tip_height: 145,    // Maximum tip height = hub_height + rotor_diam/2 [m]
+        capacity_mw: 2.3,   // Electrical capacity per turbine [MW]
+        hub_height: 90,     // Hub height above ground [m]
+        rotor_diam: 71,     // Rotor diameter [m]
+        tip_height: 126,    // Maximum tip height = hub_height + rotor_diam/2 [m]
+        flh: 1228,          // Full-load hours per year [h/yr] – from cNRD Table 3.2
         color: '#e74c3c',
         turbines: [
             { id: 'A-1', lat: 52.113352, lon: 5.054729 },
@@ -328,17 +329,19 @@ const TURBINE_OPTIONS = {
             { id: 'A-4', lat: 52.113771, lon: 5.067392 },
             { id: 'A-5', lat: 52.111787, lon: 5.071481 },
             { id: 'A-6', lat: 52.110256, lon: 5.072524 },
-            { id: 'A-7', lat: 52.102285, lon: 5.073085 }
+            { id: 'A-7', lat: 52.102285, lon: 5.073085 },
+            { id: 'A-8', lat: 52.116500, lon: 5.058000 }
         ]
     },
     B: {
         nameNl: 'Optie B', nameEn: 'Option B',
-        descNl: '4 middelgrote turbines (~4.5 MW)', descEn: '4 medium turbines (~4.5 MW)',
+        descNl: '4 middelgrote turbines (~3.8 MW)', descEn: '4 medium turbines (~3.8 MW)',
         LwA: 107,
-        capacity_mw: 4.5,
-        hub_height: 120,
-        rotor_diam: 130,
-        tip_height: 185,
+        capacity_mw: 3.8,
+        hub_height: 117,
+        rotor_diam: 117,
+        tip_height: 175,
+        flh: 1842,          // Full-load hours per year [h/yr] – from cNRD Table 3.2
         color: '#27ae60',
         turbines: [
             { id: 'B-1', lat: 52.113444, lon: 5.054716 },
@@ -349,12 +352,13 @@ const TURBINE_OPTIONS = {
     },
     C: {
         nameNl: 'Optie C', nameEn: 'Option C',
-        descNl: '4 grote turbines (~6 MW)', descEn: '4 large turbines (~6 MW)',
+        descNl: '4 grote turbines (~4.5 MW)', descEn: '4 large turbines (~4.5 MW)',
         LwA: 109,
-        capacity_mw: 6.0,
+        capacity_mw: 4.5,
         hub_height: 140,
-        rotor_diam: 162,
-        tip_height: 221,
+        rotor_diam: 150,
+        tip_height: 215,
+        flh: 2222,          // Full-load hours per year [h/yr] – from cNRD Table 3.2
         color: '#f39c12',
         turbines: [
             { id: 'C-1', lat: 52.113708, lon: 5.054795 },
@@ -365,12 +369,13 @@ const TURBINE_OPTIONS = {
     },
     D: {
         nameNl: 'Optie D', nameEn: 'Option D',
-        descNl: '2 zeer grote turbines (~9 MW)', descEn: '2 very large turbines (~9 MW)',
+        descNl: '2 zeer grote turbines (~7.2 MW)', descEn: '2 very large turbines (~7.2 MW)',
         LwA: 111,
-        capacity_mw: 9.0,
+        capacity_mw: 7.2,
         hub_height: 160,
-        rotor_diam: 200,
-        tip_height: 260,
+        rotor_diam: 172,
+        tip_height: 246,
+        flh: 2451,          // Full-load hours per year [h/yr] – from cNRD Table 3.2
         color: '#8e44ad',
         turbines: [
             { id: 'D-1', lat: 52.115436, lon: 5.064827 },
@@ -979,7 +984,7 @@ function calcShadowHours(lat, lon, optKey) {
  */
 function calcEnergy(optKey) {
     const opt = TURBINE_OPTIONS[optKey];
-    const FLH = 2200; // full-load hours per year [h/yr]
+    const FLH = opt.flh;  // Use option-specific full-load hours
     const mwh = opt.turbines.length * opt.capacity_mw * FLH;
     const households = Math.round(mwh * 1000 / 3500);  // 3,500 kWh/yr per household
     const co2 = Math.round(mwh * 0.4);                 // 0.4 kg CO₂/kWh → tonnes
@@ -1430,6 +1435,12 @@ function buildControls() {
 }
 buildControls();
 document.getElementById('btn-reset').addEventListener('click', resetAppState);
+
+
+/* ── Fullscreen toggle button (mobile only) ── */
+document.getElementById('btn-fullscreen').addEventListener('click', () => {
+    document.body.classList.toggle('info-fullscreen');
+});
 
 
 /* ── Layer checkbox listeners ── */

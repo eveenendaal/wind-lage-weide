@@ -317,3 +317,45 @@ body {
         display: none;
     }
 }
+.info-fullscreen-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: rgba(0,0,0,0.1);
+    color: white;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.info-fullscreen-btn:active {
+    background: rgba(0,0,0,0.2);
+}
+
+@media (max-width: 480px) {
+    .info-fullscreen-btn {
+        display: flex !important;
+    }
+    body.info-fullscreen #controls {
+        display: none;
+    }
+    body.info-fullscreen #info-panel {
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        max-height: none;
+        border-radius: 0;
+    }
+    body.info-fullscreen #info-body {
+        max-height: calc(100vh - 60px);
+    }
+}

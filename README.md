@@ -2,6 +2,8 @@
 
 GitHub Pages site with an interactive map and effect calculations for the proposed wind turbines at Lage Weide, Utrecht.
 
+> **Creator's note**: This tool was created by a curious resident of Maarssen with no official affiliation to the project, municipality, or any planning authority. It is an independent educational tool for public orientation only.
+
 ---
 
 > **Dutch / Nederlands** → see section below for Dutch version.
@@ -49,6 +51,8 @@ style.css    – all styling
 app.js       – all logic and calculations (extensively commented)
 documents/   – source PDF reports and KML file
 ```
+
+See [documents/README.md](documents/README.md) for details on the supporting documentation.
 
 ### Calculation notes
 
@@ -139,9 +143,11 @@ CO₂  = E × 0.4              [tonnes CO₂/year]
 
 ### Data sources
 
-- Turbine locations: `Wind at Lage Weide.kml`
+- Turbine locations: `Wind at Lage Weide.kml` (generated from PDF maps; GPS coordinates estimated)
 - Effects methodology: *Concept NRD Windpark Lage Weide* (Haskoning Nederland B.V., March 2026)
 - Public opinion: *Terugkoppeling flitspeiling Wind op Lage Weide* (Gemeente Utrecht, January 2026)
+
+See [documents/README.md](documents/README.md) for a complete explanation of each supporting document.
 
 ---
 
@@ -176,6 +182,8 @@ style.css    – alle stijlen
 app.js       – alle logica en berekeningen (uitvoerig van commentaar voorzien)
 documents/   – bron-PDF's en KML-bestand
 ```
+
+Zie [documents/README.md](documents/README.md) voor informatie over de ondersteunende documentatie.
 
 ### Berekeningsnotities
 
@@ -266,12 +274,24 @@ CO₂  = E × 0,4              [ton CO₂/jaar]
 
 ### Gegevensbronnen
 
-- Turbinelocaties: `Wind at Lage Weide.kml`
+- Turbinelocaties: `Wind at Lage Weide.kml` (gegenereerd op basis van PDF-kaarten; GPS-coördinaten geschat)
 - Effectenmethodiek: *Concept NRD Windpark Lage Weide* (Haskoning Nederland B.V., maart 2026)
 - Publieke opinie: *Terugkoppeling flitspeiling Wind op Lage Weide* (Gemeente Utrecht, januari 2026)
+
+Zie [documents/README.md](documents/README.md) voor meer informatie over elk ondersteunend document.
 
 ---
 
 ## GitHub Pages setup
 
 Deployment is handled automatically by GitHub Actions on every push to `master` (see `.github/workflows/deploy.yml`). No manual Pages configuration is needed beyond ensuring GitHub Pages is enabled in the repository settings with the source set to **GitHub Actions**.
+
+---
+
+## Legal Notice
+
+**About this tool**: This calculator was created by an independent resident of Maarssen with no official affiliation to the municipality, project team, or any planning authority. It is an educational tool for public orientation only and is not part of the formal Environmental Impact Assessment process.
+
+All calculations are **simplified indicative estimates** and are **not** a substitute for the official MER/EIA. For official information and formal decision-making, refer to the project's formal environmental assessment and the Municipality of Utrecht's official channels.
+
+The source documents (PDFs in the `documents/` folder) are the intellectual property of their respective authors (Haskoning Nederland B.V. and Gemeente Utrecht) and are provided here for reference and transparency only.

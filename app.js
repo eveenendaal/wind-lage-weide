@@ -118,6 +118,11 @@ const I18N = {
         horizonTitle:    '🔭 Horizonsilhouet',
         horizonNote:     'Schematische weergave van de hoekgroottes op basis van geometrische berekening. Een referentie-rijtjeshuis (7 m) en referentiepopulier (15 m) op 50 m afstand staan net buiten de windmolengroep. Het beeld is gecentreerd op de dichtstbijzijnde windmolen. Schaal is automatisch aangepast aan het hoogste object. Werkelijke zichtbaarheid hangt ook af van weersomstandigheden en exacte positie.',
         horizonRefLabel: 'Ter context buiten de windmolengroep: 🏠 rijtjeshuis 7 m en 🌳 populier 15 m op 50 m afstand',
+
+        // Links
+        links:           'Links',
+        linkGithub:      'Broncode (GitHub)',
+        linkProject:     'Officieel project',
     },
 
     en: {
@@ -215,6 +220,11 @@ const I18N = {
         horizonTitle:    '🔭 Horizon silhouette',
         horizonNote:     'Schematic view of turbine angular sizes based on geometric calculation. A reference Dutch terraced house (7 m) and poplar tree (15 m) at 50 m distance are shown just outside the turbine group. The view is centered on the nearest turbine. Scale is auto-adjusted to the tallest object. Actual visibility also depends on weather conditions and exact position.',
         horizonRefLabel: 'For context outside the turbine group: 🏠 terraced house 7 m and 🌳 poplar 15 m at 50 m distance',
+
+        // Links
+        links:           'Links',
+        linkGithub:      'Source code (GitHub)',
+        linkProject:     'Official project',
     }
 };
 
@@ -1373,9 +1383,23 @@ function buildControls() {
     document.getElementById('norm-4').textContent = t('norm4');
     document.getElementById('norm-note').textContent = t('normNote');
     document.getElementById('source-note').textContent = t('sourceNote');
+    document.getElementById('ctrl-links-h3').textContent = t('links');
     document.getElementById('btn-my-location').innerHTML =
         `<span class="loc-icon">📍</span> ${t('myLocation')}`;
     document.getElementById('legend-title').textContent = t('legendTitle');
+
+    // Populate links
+    const linksContainer = document.getElementById('links-container');
+    linksContainer.innerHTML = `
+        <div style="font-size:11px;line-height:1.6;">
+            <a href="https://github.com/eveenendaal/wind-lage-weide" target="_blank" style="color:#0366d6;text-decoration:none;display:block;margin-bottom:4px;">
+                📜 ${t('linkGithub')}
+            </a>
+            <a href="https://denkmee.utrecht.nl/nl-NL/projects/windoplageweide" target="_blank" style="color:#0366d6;text-decoration:none;display:block;">
+                🔗 ${t('linkProject')}
+            </a>
+        </div>
+    `;
 
     // Rebuild dynamic alternative buttons
     const container = document.getElementById('option-btns');

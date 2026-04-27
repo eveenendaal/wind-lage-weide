@@ -18,6 +18,7 @@
     <Placemark><name>Turbine A-5</name><styleUrl>#styleA</styleUrl><Point><coordinates>5.071481,52.111787,0</coordinates></Point></Placemark>
     <Placemark><name>Turbine A-6</name><styleUrl>#styleA</styleUrl><Point><coordinates>5.072524,52.110256,0</coordinates></Point></Placemark>
     <Placemark><name>Turbine A-7</name><styleUrl>#styleA</styleUrl><Point><coordinates>5.073085,52.102285,0</coordinates></Point></Placemark>
+    <Placemark><name>Turbine A-8</name><styleUrl>#styleA</styleUrl><Point><coordinates>5.055460,52.114602,0</coordinates></Point></Placemark>
   </Folder>
 
   <Folder>

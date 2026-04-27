@@ -34,6 +34,7 @@ GitHub Pages site with an interactive map and effect calculations for the propos
   - 🏥 **Health** – TNO dose-effect relationship (% seriously annoyed)
   - 🦅 **Nature** – birds, bats, Natura 2000 proximity
   - 🌆 **Landscape** – distance, tip height and apparent turbine size per alternative
+  - 🔭 **Horizon silhouette** – schematic SVG of turbine angular sizes as seen from the selected point, with reference house and tree for scale
   - ⚡ **Energy output** – MWh/year, households powered, CO₂ avoided
 - **Noise contour circles** (47 dB Lden) around individual turbines
 - **Connector lines** from the selected point to the nearest turbine in each active option and to the A2
@@ -60,12 +61,12 @@ They are **not** a substitute for the formal Environmental Impact Assessment (ME
 Lp = LwA − 20·log₁₀(d) − 8    [dB Lden]
 ```
 
-| Symbol        | Meaning                                                                                                                         |
-|---------------|---------------------------------------------------------------------------------------------------------------------------------|
-| `LwA`         | A-weighted sound power level of one turbine [dB(A)]                                                                             |
-| `d`           | Distance from turbine to receiver [m] (clamped to ≥ 50 m)                                                                       |
-| `20·log₁₀(d)` | Spherical (geometric) spreading loss: 6 dB per distance doubling                                                                |
-| `−8`          | Combined correction for directivity, ground reflection and long-term meteorological average (standard value per Dutch RMW 2011) |
+| Symbol        | Meaning                                                                                                                                              |
+|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `LwA`         | A-weighted sound power level of one turbine [dB(A)]                                                                                                  |
+| `d`           | Distance from turbine to receiver [m] (clamped to ≥ 50 m)                                                                                            |
+| `20·log₁₀(d)` | Spherical (geometric) spreading loss: 6 dB per distance doubling                                                                                     |
+| `−8`          | Geometric spreading constant (−10·log₁₀(4π) ≈ −11 dB) plus ground reflection (+3 dB for hemispherical radiation). Standard value per Dutch RMW 2011. |
 
 When multiple turbines are active, their contributions are summed using **energy addition**:
 ```
@@ -76,11 +77,12 @@ Simply adding dB values is incorrect – this formula is physically correct.
 #### 2. A2 motorway noise – mitigation-adjusted line-source model
 
 ```
-Lden ≈ 68 − 4 − 10·log₁₀(d / 100)    [dB]
+Lden ≈ 68 − 4 − 5 − 10·log₁₀(d / 100)    [dB]
 ```
 
 - Reference level: 68 dB at 100 m for open, unshielded motorway traffic
-- Mitigation correction: 4 dB reduction for quieter asphalt (tweelaags ZOAB-fijn / double-layer porous asphalt)
+- −4 dB: quieter asphalt (tweelaags ZOAB-fijn / double-layer porous asphalt) on the Oudenrijn–Leidsche Rijntunnel corridor
+- −5 dB: sound-absorbing panel alongside the A2 in the Lage Weide corridor (conservative insertion-loss estimate)
 - The covered Leidsche Rijntunnel section is excluded from the open-air line-source calculation
 - Line-source spreading: 3 dB per distance doubling (vs. 6 dB for point sources)
 
@@ -120,7 +122,6 @@ For the nearest turbine in each active alternative, the app also estimates the a
 
 - `H` = tip height of the turbine
 - `d` = distance from the selected location
-- The result is also shown as a rough multiple of the full moon's apparent size
 
 #### 6. Energy output
 
@@ -160,6 +161,7 @@ CO₂  = E × 0.4              [tonnes CO₂/year]
   - 🏥 **Gezondheid** – TNO dosis-effectrelatie (% ernstig gehinderd)
   - 🦅 **Natuur** – vogels, vleermuizen, Natura 2000-nabijheid
   - 🌆 **Landschap** – afstand, tiphoogte en schijnbare grootte per alternatief
+  - 🔭 **Horizonsilhouet** – schematische SVG van de hoekgroottes van de turbines gezien vanaf het geselecteerde punt, met referentiehuis en -boom voor schaalvergelijking
   - ⚡ **Energieopbrengst** – MWh/jaar, huishoudens, CO₂ vermeden
 - **Geluidscontouren** (47 dB Lden) rondom individuele turbines
 - **Verbindingslijnen** van het geselecteerde punt naar de dichtstbijzijnde turbine per actief alternatief en naar de A2
@@ -186,12 +188,12 @@ Ze zijn **geen** vervanging voor het formele MER-onderzoek.
 Lp = LwA − 20·log₁₀(d) − 8    [dB Lden]
 ```
 
-| Symbool       | Betekenis                                                                                                                            |
-|---------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| `LwA`         | A-gewogen geluidsvermogensniveau van één turbine [dB(A)]                                                                             |
-| `d`           | Afstand van turbine tot ontvanger [m] (minimaal 50 m)                                                                                |
-| `20·log₁₀(d)` | Bolvormige spreidingsverzwakking: 6 dB per afstandsverdubbeling                                                                      |
-| `−8`          | Gecombineerde correctie voor directiviteit, bodemreflectie en langjarig meteorologisch gemiddelde (standaardwaarde conform RMW 2011) |
+| Symbool       | Betekenis                                                                                                                                            |
+|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `LwA`         | A-gewogen geluidsvermogensniveau van één turbine [dB(A)]                                                                                             |
+| `d`           | Afstand van turbine tot ontvanger [m] (minimaal 50 m)                                                                                                |
+| `20·log₁₀(d)` | Bolvormige spreidingsverzwakking: 6 dB per afstandsverdubbeling                                                                                      |
+| `−8`          | Geometrische spreidingsconstante (−10·log₁₀(4π) ≈ −11 dB) plus bodemreflectie (+3 dB voor hemisferische straling). Standaardwaarde conform RMW 2011. |
 
 Bij meerdere turbines wordt de bijdrage opgeteld via **energieverdubbeling**:
 ```
@@ -202,11 +204,12 @@ dB-waarden optellen is fysisch onjuist; bovenstaande formule is correct.
 #### 2. A2-snelweggeluid – gecorrigeerd lijnbronmodel
 
 ```
-Lden ≈ 68 − 4 − 10·log₁₀(d / 100)    [dB]
+Lden ≈ 68 − 4 − 5 − 10·log₁₀(d / 100)    [dB]
 ```
 
 - Referentieniveau: 68 dB op 100 m voor open, ongeschermd snelwegverkeer
-- Mitigatiecorrectie: 4 dB reductie voor stiller asfalt (tweelaags ZOAB-fijn)
+- −4 dB: stiller asfalt (tweelaags ZOAB-fijn) op het traject Oudenrijn–Leidsche Rijntunnel
+- −5 dB: geluidabsorberend scherm langs de A2 in de Lage Weide-corridor (conservatieve schatting)
 - Het overkapte deel van de Leidsche Rijntunnel telt niet mee als open lijnbron
 - Lijnbronverzwakking: 3 dB per afstandsverdubbeling (vs. 6 dB voor puntbronnen)
 
@@ -246,7 +249,6 @@ Voor de dichtstbijzijnde turbine in elk actief alternatief schat de app ook de s
 
 - `H` = tiphoogte van de turbine
 - `d` = afstand vanaf de geselecteerde locatie
-- Het resultaat wordt ook getoond als grove vergelijking met de schijnbare grootte van de volle maan
 
 #### 6. Energieopbrengst
 
@@ -272,4 +274,4 @@ CO₂  = E × 0,4              [ton CO₂/jaar]
 
 ## GitHub Pages setup
 
-Enable GitHub Pages in the repository settings, set the source to the main branch, root directory.
+Deployment is handled automatically by GitHub Actions on every push to `master` (see `.github/workflows/deploy.yml`). No manual Pages configuration is needed beyond ensuring GitHub Pages is enabled in the repository settings with the source set to **GitHub Actions**.

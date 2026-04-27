@@ -750,12 +750,15 @@ function renderHorizonSVG(lat, lon) {
    Derivation:
      • LwA = sound power level of the source [dB(A)]
      • 20·log₁₀(d) = spherical spreading loss (6 dB per doubling of distance)
-     • −8 dB = combined correction for:
-         – directivity (omnidirectional source, Dω = 0 dB)
-         – ground effect (flat terrain, typical +3 dB at receiver)
-         – long-term average meteorological correction (−6 dB; Lden includes
-           day/evening/night weighting and assumes wind speeds of 7–10 m/s)
-       The −8 constant is the standard value used in Dutch practice for
+     • −8 dB = geometric spreading constant + ground reflection:
+         – −10·log₁₀(4π) ≈ −11 dB: converts sound power to sound pressure
+           for a point source radiating into a full sphere
+         – +3 dB: ground reflection (hemispherical radiation above a flat
+           reflective surface)
+         → −11 + 3 = −8 dB
+       Meteorological corrections and Lden day/evening/night weighting are
+       implicit in the LwA value and the Lden metric itself, not in this
+       constant. The −8 value is the standard used in Dutch practice for
        the Lden assessment of wind turbines (Lden = annual average).
 
    SIMPLIFICATIONS / LIMITATIONS:

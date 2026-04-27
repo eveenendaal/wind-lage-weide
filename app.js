@@ -314,13 +314,13 @@ function clearUrlState() {
 const TURBINE_OPTIONS = {
     A: {
         nameNl: 'Optie A', nameEn: 'Option A',
-        descNl: '8 kleine turbines (~2.3 MW)', descEn: '8 small turbines (~2.3 MW)',
+        descNl: '7 kleine turbines (~2.3 MW)', descEn: '7 small turbines (~2.3 MW)',
         LwA: 105,           // A-weighted sound power level [dB(A)]
         capacity_mw: 2.3,   // Electrical capacity per turbine [MW]
         hub_height: 90,     // Hub height above ground [m]
         rotor_diam: 71,     // Rotor diameter [m]
         tip_height: 126,    // Maximum tip height = hub_height + rotor_diam/2 [m]
-        flh: 1228,          // Full-load hours per year [h/yr] – from cNRD Table 3.2
+        flh: 1404,          // Full-load hours per year [h/yr] – from cNRD Table 3.2
         color: '#e74c3c',
         turbines: [
             { id: 'A-1', lat: 52.113352, lon: 5.054729 },
@@ -329,8 +329,7 @@ const TURBINE_OPTIONS = {
             { id: 'A-4', lat: 52.113771, lon: 5.067392 },
             { id: 'A-5', lat: 52.111787, lon: 5.071481 },
             { id: 'A-6', lat: 52.110256, lon: 5.072524 },
-            { id: 'A-7', lat: 52.102285, lon: 5.073085 },
-            { id: 'A-8', lat: 52.116500, lon: 5.058000 }
+            { id: 'A-7', lat: 52.102285, lon: 5.073085 }
         ]
     },
     B: {

@@ -1386,7 +1386,6 @@ function buildControls() {
     document.getElementById('ctrl-links-h3').textContent = t('links');
     document.getElementById('btn-my-location').innerHTML =
         `<span class="loc-icon">📍</span> ${t('myLocation')}`;
-    document.getElementById('legend-title').textContent = t('legendTitle');
 
     // Populate links
     const linksContainer = document.getElementById('links-container');
@@ -1404,8 +1403,6 @@ function buildControls() {
     // Rebuild dynamic alternative buttons
     const container = document.getElementById('option-btns');
     container.innerHTML = '';
-    const legendEl = document.getElementById('legend-opts');
-    legendEl.innerHTML = '';
 
     for (const [key, opt] of Object.entries(TURBINE_OPTIONS)) {
         const name = LANG === 'nl' ? opt.nameNl : opt.nameEn;
@@ -1429,12 +1426,6 @@ function buildControls() {
             updateUrlState();
         });
         container.appendChild(btn);
-
-        // Bottom legend entry
-        const le = document.createElement('div');
-        le.className = 'legend-row';
-        le.innerHTML = `<div class="legend-swatch" style="background:${opt.color}"></div>${name}: ${desc}`;
-        legendEl.appendChild(le);
     }
 }
 buildControls();

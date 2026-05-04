@@ -1,4 +1,4 @@
-# Copilot instructions for `wind-lage-weide`
+# Claude Instructions for `wind-lage-weide`
 
 ## Build, test, and lint
 
@@ -58,6 +58,6 @@ There are two A2 geometries with different purposes:
 - **Refresh the report through shared state**, not by duplicating calculations in event handlers. Use `refreshCurrentReport()` when toggles or language changes should update the selected-point report.
 - **Preserve the URL-state model** when adding filters or new persistent UI controls. New persistent state should be parsed on load, applied in `applyInitialUrlState()`, and written back in `updateUrlState()`.
 - **Treat `A2_PATH` and `A2_NOISE_PATH` differently**. Map display changes and sound-model changes are not always the same edit.
-- **Follow the existing “single-file app with sectioned JS” style**. `app.js` is intentionally monolithic but heavily structured; extend the relevant section instead of creating scattered helpers without context.
+- **Follow the existing "single-file app with sectioned JS" style**. `app.js` is intentionally monolithic but heavily structured; extend the relevant section instead of creating scattered helpers without context.
 - **Keep mobile behavior in `style.css` media queries**. Do not create separate mobile markup unless the existing responsive approach truly cannot support the change.
 - **Use the source documents in `documents/` as the factual basis** for turbine locations and planning context when adjusting domain content.

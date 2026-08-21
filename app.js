@@ -57,7 +57,7 @@ const I18N = {
         thCumul:         'Cumulatief',
         thDelta:         '+ΔdB',
         thRating:        'Beoordeling',
-        noiseNote:       'Norm: 45 dB (standaard) / 47 dB (grenswaarde) Lden.<br>ΔdB = toename boven A2-achtergrond door windturbines.<br>Wind-Lden is vereenvoudigd berekend (puntbronmodel zonder scherm/terreineffecten).',
+        noiseNote:       'Norm: 45 dB (standaard) / 47 dB (grenswaarde) Lden.<br>ΔdB = toename boven A2-achtergrond door windturbines.<br>Wind-Lden is vereenvoudigd berekend (puntbronmodel zonder scherm/terreineffecten). Het gehanteerde bronvermogen (105–111 dB(A)) is een indicatieve aanname per turbinegrootte; de cNRD noemt geen bronvermogen per alternatief.',
         noSelect:        'Selecteer een of meer opties om geluidseffecten te zien.',
         shadowTitle:     '☀️ Slagschaduw (schatting)',
         shadowHrYr:      'uur/jaar',
@@ -84,7 +84,7 @@ const I18N = {
         thMWh:           'MWh/jr',
         thHH:            'Huishoudens',
         thCO2:           'CO₂ vermeden',
-        energyNote:      'Aanname: 2.200 vollasturen/jaar (typisch binnenland NL). Huishoudens op basis van 3.500 kWh/jr. CO₂ op basis van 0,4 kg/kWh.',
+        energyNote:      'Vollasturen verschillen per alternatief (1.228–2.451 uur/jaar) en zijn afgeleid uit de opbrengstschatting in cNRD Tabel 3.2; hogere masten halen meer vollasturen. Huishoudens op basis van 3.500 kWh/jr. CO₂ op basis van 0,4 kg/kWh.',
         disclaimer:      '⚠️ <b>Let op:</b> Alle berekeningen zijn vereenvoudigde oriënterende schattingen op basis van puntbronmodellen en kengetallen uit de cNRD (Haskoning, maart 2026). Definitieve waarden worden vastgesteld in het MER-onderzoek.',
 
         // Classification labels
@@ -163,7 +163,7 @@ const I18N = {
         thCumul:         'Cumulative',
         thDelta:         '+ΔdB',
         thRating:        'Rating',
-        noiseNote:       'Standard: 45 dB (normal) / 47 dB (limit) Lden.<br>ΔdB = increase above A2 background due to wind turbines.<br>Wind Lden is a simplified estimate (point-source model, no barriers or terrain effects).',
+        noiseNote:       'Standard: 45 dB (normal) / 47 dB (limit) Lden.<br>ΔdB = increase above A2 background due to wind turbines.<br>Wind Lden is a simplified estimate (point-source model, no barriers or terrain effects). The sound power levels used (105–111 dB(A)) are indicative assumptions per turbine size class; the cNRD does not publish a sound power level per alternative.',
         noSelect:        'Select one or more alternatives to see noise effects.',
         shadowTitle:     '☀️ Shadow flicker (estimate)',
         shadowHrYr:      'hrs/yr',
@@ -190,7 +190,7 @@ const I18N = {
         thMWh:           'MWh/yr',
         thHH:            'Households',
         thCO2:           'CO₂ avoided',
-        energyNote:      'Assumption: 2,200 full-load hours/year (typical Netherlands inland). Households based on 3,500 kWh/yr. CO₂ based on 0.4 kg/kWh.',
+        energyNote:      'Full-load hours differ per alternative (1,228–2,451 h/yr) and are derived from the output estimate in cNRD Table 3.2; taller towers reach more full-load hours. Households based on 3,500 kWh/yr. CO₂ based on 0.4 kg/kWh.',
         disclaimer:      '⚠️ <b>Note:</b> All calculations are simplified indicative estimates based on point-source models and figures from the cNRD (Haskoning, March 2026). Definitive values will be established in the formal EIA.',
 
         veryLow:         'Very low',
@@ -234,8 +234,26 @@ let LANG = 'nl';
 /** Convenience accessor: returns the translated string for key `k`. */
 function t(k) { return I18N[LANG][k]; }
 
+/** Like `t()`, but substitutes ${name} placeholders from `vars`. */
 function tf(k, vars) {
     return t(k).replace(/\$\{(\w+)\}/g, (_, name) => String(vars[name] ?? ''));
+}
+
+/**
+ * Turbine alternatives carry their own two translations rather than i18n keys,
+ * because the set of alternatives is data, not interface text.
+ */
+function optionName(opt) { return LANG === 'nl' ? opt.nameNl : opt.nameEn; }
+function optionDesc(opt) { return LANG === 'nl' ? opt.descNl : opt.descEn; }
+
+/** True when both arrays hold the same keys, ignoring order. */
+function sameKeys(a, b) {
+    return a.length === b.length && a.every(key => b.includes(key));
+}
+
+/** The checkbox element controlling map layer `key`. */
+function layerToggle(key) {
+    return document.getElementById(`toggle-${key}`);
 }
 
 function parseCsvParam(value, validKeys) {
@@ -278,10 +296,8 @@ function updateUrlState() {
     if (activeOptionKeys.length === OPTION_KEYS.length) url.searchParams.delete('opts');
     else url.searchParams.set('opts', activeOptionKeys.join(','));
 
-    const activeLayerKeys = LAYER_KEYS.filter(key => document.getElementById(`toggle-${key}`).checked);
-    if (activeLayerKeys.length === 2 && activeLayerKeys.includes('turbines') && activeLayerKeys.includes('noise')) {
-        url.searchParams.delete('layers');
-    }
+    const activeLayerKeys = LAYER_KEYS.filter(key => layerToggle(key).checked);
+    if (sameKeys(activeLayerKeys, DEFAULT_LAYER_KEYS)) url.searchParams.delete('layers');
     else url.searchParams.set('layers', activeLayerKeys.join(','));
 
     if (lastClickedLatLon) {
@@ -305,22 +321,45 @@ function clearUrlState() {
    Detailniveau (cNRD) Windpark Lage Weide, Haskoning Nederland B.V.,
    March 2026.
 
+   Dimensions, capacity and turbine counts are taken verbatim from
+   cNRD Table 3.2 ("Bandbreedte windturbines Windpark Lage Weide"):
+
+     Alternative                  A       B       C       D
+     Capacity per turbine [MW]   2.3     3.8     4.5     7.2
+     Number of turbines            8       4       4       2
+     Max tip height [m]           90     150     210     252
+     Max rotor diameter [m]       71     117     150     172
+     Max hub height [m]           54    91.5     135     166
+     Estimated output [GWh/yr]  22.6    28.0    40.0    35.3
+
+   Note that hub_height + rotor_diam / 2 = tip_height for every row.
+
+   `flh` (full-load hours) is derived from that same table, so that
+   N × capacity_mw × flh reproduces the cNRD output figure. It is NOT a
+   single generic value: yield rises with hub height, which is why the
+   short turbines of alternative A reach far fewer full-load hours than
+   the tall turbines of alternative D.
+
    Key acoustic parameter:
      LwA – A-weighted sound power level [dB(A)]
            This is the total acoustic energy emitted by one turbine.
            Higher LwA → louder turbine.
+           The cNRD does not publish a sound power level per alternative,
+           so these are indicative values for the corresponding turbine
+           size class (roughly 105–111 dB(A) for 2–7 MW machines) and are
+           an assumption of this tool, not a figure from the cNRD.
    ═══════════════════════════════════════════════════════════════════════ */
 
 const TURBINE_OPTIONS = {
     A: {
         nameNl: 'Optie A', nameEn: 'Option A',
-        descNl: '8 kleine turbines (~2.3 MW)', descEn: '8 small turbines (~2.3 MW)',
-        LwA: 105,           // A-weighted sound power level [dB(A)]
+        descNl: '8 turbines · 90 m tip · 2,3 MW', descEn: '8 turbines · 90 m tip · 2.3 MW',
+        LwA: 105,           // A-weighted sound power level [dB(A)] – indicative
         capacity_mw: 2.3,   // Electrical capacity per turbine [MW]
-        hub_height: 90,     // Hub height above ground [m]
+        hub_height: 54,     // Hub height above ground [m]
         rotor_diam: 71,     // Rotor diameter [m]
-        tip_height: 126,    // Maximum tip height = hub_height + rotor_diam/2 [m]
-        flh: 1228,          // Full-load hours per year [h/yr] – from cNRD Table 3.2
+        tip_height: 90,     // Maximum tip height = hub_height + rotor_diam/2 [m]
+        flh: 1228,          // Full-load hours/yr – derived from cNRD Table 3.2 (22.6 GWh/yr)
         color: '#e74c3c',
         turbines: [
             { id: 'A-1', lat: 52.113352, lon: 5.054729 },
@@ -335,13 +374,13 @@ const TURBINE_OPTIONS = {
     },
     B: {
         nameNl: 'Optie B', nameEn: 'Option B',
-        descNl: '4 middelgrote turbines (~3.8 MW)', descEn: '4 medium turbines (~3.8 MW)',
+        descNl: '4 turbines · 150 m tip · 3,8 MW', descEn: '4 turbines · 150 m tip · 3.8 MW',
         LwA: 107,
         capacity_mw: 3.8,
-        hub_height: 117,
+        hub_height: 91.5,
         rotor_diam: 117,
-        tip_height: 175,
-        flh: 1842,          // Full-load hours per year [h/yr] – from cNRD Table 3.2
+        tip_height: 150,
+        flh: 1842,          // Full-load hours/yr – derived from cNRD Table 3.2 (28.0 GWh/yr)
         color: '#27ae60',
         turbines: [
             { id: 'B-1', lat: 52.113444, lon: 5.054716 },
@@ -352,13 +391,13 @@ const TURBINE_OPTIONS = {
     },
     C: {
         nameNl: 'Optie C', nameEn: 'Option C',
-        descNl: '4 grote turbines (~4.5 MW)', descEn: '4 large turbines (~4.5 MW)',
+        descNl: '4 turbines · 210 m tip · 4,5 MW', descEn: '4 turbines · 210 m tip · 4.5 MW',
         LwA: 109,
         capacity_mw: 4.5,
-        hub_height: 140,
+        hub_height: 135,
         rotor_diam: 150,
-        tip_height: 215,
-        flh: 2222,          // Full-load hours per year [h/yr] – from cNRD Table 3.2
+        tip_height: 210,
+        flh: 2222,          // Full-load hours/yr – derived from cNRD Table 3.2 (40.0 GWh/yr)
         color: '#f39c12',
         turbines: [
             { id: 'C-1', lat: 52.113708, lon: 5.054795 },
@@ -369,13 +408,13 @@ const TURBINE_OPTIONS = {
     },
     D: {
         nameNl: 'Optie D', nameEn: 'Option D',
-        descNl: '2 zeer grote turbines (~7.2 MW)', descEn: '2 very large turbines (~7.2 MW)',
+        descNl: '2 turbines · 252 m tip · 7,2 MW', descEn: '2 turbines · 252 m tip · 7.2 MW',
         LwA: 111,
         capacity_mw: 7.2,
-        hub_height: 160,
+        hub_height: 166,
         rotor_diam: 172,
-        tip_height: 246,
-        flh: 2451,          // Full-load hours per year [h/yr] – from cNRD Table 3.2
+        tip_height: 252,
+        flh: 2451,          // Full-load hours/yr – derived from cNRD Table 3.2 (35.3 GWh/yr)
         color: '#8e44ad',
         turbines: [
             { id: 'D-1', lat: 52.115436, lon: 5.064827 },
@@ -431,13 +470,16 @@ const A2_PATH = [
     [52.0976367, 5.0678670]
 ];
 
-// Northern covered section (Leidsche Rijntunnel) is drawn on the map but excluded
-// from the open-air line-source noise model.  The southern section was trimmed to
-// the last open-air point; points beyond that represent an underground section and
-// are not included in A2_PATH at all.
-const A2_NOISE_PATH = A2_PATH.slice(7);
-const A2_UNSHIELDED_REF_LDEN = 68;
-const A2_QUIET_ASPHALT_REDUCTION_DB = 4;
+// The first vertices of A2_PATH cover the Leidsche Rijntunnel. That section is
+// drawn on the map (it is still the motorway) but is excluded from the open-air
+// line-source noise model, because a covered road radiates no traffic noise to
+// the surface. The southern end of A2_PATH was already trimmed to the last
+// open-air point, so no vertices need dropping there.
+const A2_TUNNEL_VERTEX_COUNT = 7;
+const A2_NOISE_PATH = A2_PATH.slice(A2_TUNNEL_VERTEX_COUNT);
+
+const A2_UNSHIELDED_REF_LDEN = 68;       // Lden at 100 m, open unshielded motorway [dB]
+const A2_QUIET_ASPHALT_REDUCTION_DB = 4; // Double-layer porous asphalt (tweelaags ZOAB-fijn)
 // Sound-absorbing panel alongside the A2 in the Lage Weide corridor.
 // A conservative flat insertion-loss estimate of 5 dB is applied to all
 // receivers; the actual benefit depends on panel height and geometry.
@@ -450,14 +492,19 @@ const HORIZON_TREE_H = 15;
 const HORIZON_TREE_TRUNK_H = 3;
 
 const LAYER_KEYS = ['turbines', 'noise', 'safety', 'a2', 'context'];
+/** Layers shown on a fresh load; also the "no ?layers= needed" URL default. */
+const DEFAULT_LAYER_KEYS = ['turbines', 'noise'];
 const OPTION_KEYS = Object.keys(TURBINE_OPTIONS);
 const URL_STATE = parseUrlState();
-LANG = URL_STATE.lang;
+setDocumentLang(URL_STATE.lang);
 
 
 /* ═══════════════════════════════════════════════════════════════════════
    SECTION 3 – GEOMETRY HELPERS
    ═══════════════════════════════════════════════════════════════════════ */
+
+const EARTH_RADIUS_M = 6371000;   // Mean Earth radius [m]
+const DEG = Math.PI / 180;        // Radians per degree
 
 /**
  * Haversine formula – great-circle distance between two points on Earth.
@@ -478,58 +525,60 @@ LANG = URL_STATE.lang;
  * @returns {number} distance [metres]
  */
 function haversine(lat1, lon1, lat2, lon2) {
-    const R    = 6371000;
-    const phi1 = lat1 * Math.PI / 180;
-    const phi2 = lat2 * Math.PI / 180;
-    const dphi = (lat2 - lat1) * Math.PI / 180;
-    const dlam = (lon2 - lon1) * Math.PI / 180;
+    const phi1 = lat1 * DEG;
+    const phi2 = lat2 * DEG;
+    const dphi = (lat2 - lat1) * DEG;
+    const dlam = (lon2 - lon1) * DEG;
     const a    = Math.sin(dphi / 2) ** 2
                + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dlam / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function projectLatLon(lat, lon, latRef, lonRef) {
-    const xScale = Math.cos(latRef * Math.PI / 180) * 6371000 * Math.PI / 180;
-    const yScale = 6371000 * Math.PI / 180;
-    return {
-        x: (lon - lonRef) * xScale,
-        y: (lat - latRef) * yScale,
-        xScale,
-        yScale
-    };
-}
-
-function unprojectPoint(x, y, latRef, lonRef, xScale, yScale) {
-    return {
-        lat: latRef + y / yScale,
-        lon: lonRef + x / xScale
-    };
+    return EARTH_RADIUS_M * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /**
- * Shortest distance from point P=(px,py) to segment A=(ax,ay)–B=(bx,by),
- * all in the same 2-D coordinate system (e.g. local metres).
+ * Scale factors of a local equirectangular projection centred on `latRef`:
+ * how many metres one degree of longitude and of latitude span there.
  *
- * Uses clamped projection: t = clamp(AP·AB / |AB|², 0, 1).
- * The nearest point on AB is then A + t·AB.
+ * Callers should centre the projection on the point they measure *from*, so
+ * that its origin is exact and the longitude scale is taken at its latitude.
  *
- * @returns {number} distance [same unit as input]
+ * @param {number} latRef – latitude the projection is centred on [degrees]
+ * @returns {{ xScale: number, yScale: number }} metres per degree (east, north)
  */
-function distToSegment(px, py, ax, ay, bx, by) {
-    const dx    = bx - ax, dy = by - ay;
-    const lenSq = dx * dx + dy * dy;
-    if (lenSq === 0) return Math.hypot(px - ax, py - ay); // degenerate segment
-    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
-    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+function latLonScales(latRef) {
+    const yScale = EARTH_RADIUS_M * DEG;
+    return { xScale: Math.cos(latRef * DEG) * yScale, yScale };
 }
 
+/**
+ * Move a lat/lon by a local east/north displacement in metres.
+ *
+ * @param {number} lat          – origin latitude [degrees]
+ * @param {number} lon          – origin longitude [degrees]
+ * @param {number} eastMetres   – displacement towards east [m]
+ * @param {number} northMetres  – displacement towards north [m]
+ * @returns {{ lat: number, lon: number }}
+ */
+function offsetLatLonMetres(lat, lon, eastMetres, northMetres) {
+    const { xScale, yScale } = latLonScales(lat);
+    return { lat: lat + northMetres / yScale, lon: lon + eastMetres / xScale };
+}
+
+/**
+ * Point on segment A=(ax,ay)–B=(bx,by) closest to P=(px,py), all in the same
+ * 2-D coordinate system (here: local metres).
+ *
+ * Uses clamped projection: t = clamp(AP·AB / |AB|², 0, 1).
+ * The nearest point on AB is then A + t·AB; clamping t to [0, 1] keeps it
+ * inside the segment rather than on the infinite line through A and B.
+ *
+ * @returns {{ x: number, y: number, dist: number }} nearest point and its distance
+ */
 function closestPointOnSegment(px, py, ax, ay, bx, by) {
     const dx = bx - ax;
     const dy = by - ay;
     const lenSq = dx * dx + dy * dy;
-    if (lenSq === 0) {
-        return { x: ax, y: ay, dist: Math.hypot(px - ax, py - ay) };
-    }
+    // Degenerate (zero-length) segment: A is the only candidate point.
+    if (lenSq === 0) return { x: ax, y: ay, dist: Math.hypot(px - ax, py - ay) };
     const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
     const x = ax + t * dx;
     const y = ay + t * dy;
@@ -539,9 +588,10 @@ function closestPointOnSegment(px, py, ax, ay, bx, by) {
 /**
  * Shortest distance from a lat/lon point to a polyline (array of [lat, lon]).
  *
- * Projects all coordinates into a local flat (equirectangular) plane
- * centred on the first polyline vertex. This introduces <0.1 % error
- * for the distances involved here (~1–10 km).
+ * Projects all coordinates into a local flat (equirectangular) plane centred on
+ * the observer. Measured against the great-circle distance this stays within
+ * about 0.7 m over the full A2 path (≈0.02 % at 4 km), far below the metre
+ * rounding the report displays.
  *
  * @param {number}   lat      – observer latitude [degrees]
  * @param {number}   lon      – observer longitude [degrees]
@@ -552,28 +602,48 @@ function distToPolyline(lat, lon, polyline) {
     return nearestPointOnPolyline(lat, lon, polyline).dist;
 }
 
+/**
+ * Point on `polyline` closest to (lat, lon), plus its distance.
+ *
+ * All vertices are projected once into the same local flat plane so that the
+ * segment maths below is plain 2-D geometry in metres.
+ *
+ * @param {number}     lat      – observer latitude [degrees]
+ * @param {number}     lon      – observer longitude [degrees]
+ * @param {number[][]} polyline – [[lat, lon], …], at least two vertices
+ * @returns {{ lat: number, lon: number, dist: number }}
+ */
 function nearestPointOnPolyline(lat, lon, polyline) {
-    const latRef = polyline[0][0], lonRef = polyline[0][1];
-    const { x: px, y: py, xScale, yScale } = projectLatLon(lat, lon, latRef, lonRef);
-    let bestPoint = null;
-    for (let i = 0; i < polyline.length - 1; i++) {
-        const { x: ax, y: ay } = projectLatLon(polyline[i][0], polyline[i][1], latRef, lonRef);
-        const { x: bx, y: by } = projectLatLon(polyline[i + 1][0], polyline[i + 1][1], latRef, lonRef);
-        const candidate = closestPointOnSegment(px, py, ax, ay, bx, by);
-        if (!bestPoint || candidate.dist < bestPoint.dist) bestPoint = candidate;
-    }
-    const nearest = unprojectPoint(bestPoint.x, bestPoint.y, latRef, lonRef, xScale, yScale);
-    return { ...nearest, dist: bestPoint.dist };
-}
+    // Centre the projection on the observer: they sit exactly at the origin and
+    // the longitude scale is correct at their latitude, so the error in the
+    // reported distance grows only with that distance. Centring on an arbitrary
+    // polyline vertex instead would spread the projection error of the whole
+    // line (several km of the A2) into every result.
+    const { xScale, yScale } = latLonScales(lat);
+    const points = polyline.map(([vLat, vLon]) => ({
+        x: (vLon - lon) * xScale,
+        y: (vLat - lat) * yScale
+    }));
 
-function apparentHeightDegrees(heightMetres, distanceMetres) {
-    const d = Math.max(distanceMetres, 1);
-    return 2 * Math.atan(heightMetres / (2 * d)) * 180 / Math.PI;
+    let best = { x: points[0].x, y: points[0].y, dist: Math.hypot(points[0].x, points[0].y) };
+    for (let i = 0; i < points.length - 1; i++) {
+        const candidate = closestPointOnSegment(0, 0, points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
+        if (candidate.dist < best.dist) best = candidate;
+    }
+    return { ...offsetLatLonMetres(lat, lon, best.x, best.y), dist: best.dist };
 }
 
 /**
  * Elevation angle from the observer's eye level (ground) to the top of an
  * object of given height at a given horizontal distance.
+ *
+ *   θ = atan(H / d)
+ *
+ * Because both the observer and the base of the object stand on the ground,
+ * this angle is simultaneously the object's *apparent height*: the angle its
+ * silhouette spans from base to tip. (The textbook angular-diameter formula
+ * 2·atan(H / 2d) applies to an object centred on the line of sight, e.g. the
+ * moon — not to a tower rising from the observer's own ground plane.)
  *
  * @param {number} heightMetres   – object height [m]
  * @param {number} distanceMetres – horizontal distance [m]
@@ -603,6 +673,27 @@ function bearingDegrees(lat1, lon1, lat2, lon2) {
 }
 
 /**
+ * The turbine of one alternative closest to (lat, lon).
+ *
+ * Every alternative has at least one turbine, so this always returns a result.
+ * The nearest turbine is the worst case for shadow flicker, external safety and
+ * apparent size alike, so all three sections share this single lookup.
+ *
+ * @param {number} lat – observer latitude [degrees]
+ * @param {number} lon – observer longitude [degrees]
+ * @param {object} opt – one entry of TURBINE_OPTIONS
+ * @returns {{ turbine: object, dist: number }} nearest turbine and its distance [m]
+ */
+function nearestTurbine(lat, lon, opt) {
+    let best = null;
+    for (const turbine of opt.turbines) {
+        const dist = haversine(lat, lon, turbine.lat, turbine.lon);
+        if (!best || dist < best.dist) best = { turbine, dist };
+    }
+    return best;
+}
+
+/**
  * Build an SVG showing the angular silhouette of all active wind turbines as
  * seen from the observer at (lat, lon), centred on the nearest turbine.
  *
@@ -624,12 +715,13 @@ function renderHorizonSVG(lat, lon) {
         for (const turbine of opt.turbines) {
             const dist        = haversine(lat, lon, turbine.lat, turbine.lon);
             const bearing     = bearingDegrees(lat, lon, turbine.lat, turbine.lon);
-            const tipElev     = elevationDegrees(opt.tip_height, dist);
-            const hubElev     = elevationDegrees(opt.hub_height, dist);
+            const tipElev      = elevationDegrees(opt.tip_height, dist);
+            const hubElev      = elevationDegrees(opt.hub_height, dist);
             const rotorTopElev = elevationDegrees(opt.hub_height + opt.rotor_diam / 2, dist);
             const rotorBotElev = Math.max(0, elevationDegrees(opt.hub_height - opt.rotor_diam / 2, dist));
+            // Half the rotor's vertical angular extent → the disc radius to draw.
             const rotorRadAng  = (rotorTopElev - rotorBotElev) / 2;
-            items.push({ opt, dist, bearing, tipElev, hubElev, rotorRadAng });
+            items.push({ opt, dist, bearing, hubElev, rotorRadAng });
             if (tipElev > maxTipElev) maxTipElev = tipElev;
         }
     }
@@ -652,17 +744,18 @@ function renderHorizonSVG(lat, lon) {
     // SVG layout constants.
     const svgW              = 360;
     const groundY           = 58;   // y-coordinate of the ground line
-    const svgH              = 68;   // total SVG height (ground + compass label row)
+    const svgH              = 68;   // total SVG height (sky + ground strip)
     const skyPadding        = 4;    // vertical gap above the tallest turbine [px]
     const scaleMargFactor   = 1.15; // tallest object fills 1/1.15 ≈ 87 % of usable height
-    const minElevDeg        = 1.0;  // minimum angular scale [degrees] to avoid flat drawings
     const minRotorRadiusPx  = 0.8;  // minimum rotor radius in SVG units for legibility
     const refLane           = 30;   // reserved margin on both sides for reference objects
     const minHalfSpanDeg    = 4;    // minimum half-width in angular degrees around the centre turbine
     const usableH = groundY - skyPadding;   // px available for turbine drawings
-    // Auto-scale: include reference tree so it never overflows the SVG.
+    // Auto-scale to the tallest object. The reference tree is included so that it
+    // never overflows the SVG, and it also guarantees a non-zero angular scale
+    // (15 m at 50 m ≈ 16.7°) however far away the turbines are.
     const maxElev = Math.max(maxTipElev, treeTopElev);
-    const scale   = usableH / Math.max(maxElev * scaleMargFactor, minElevDeg);
+    const scale   = usableH / (maxElev * scaleMargFactor);
     const maxRotorRadius = Math.max(...items.map(item => Math.max(item.rotorRadAng * scale, minRotorRadiusPx)));
     const maxAbsRelBearing = Math.max(...items.map(item => Math.abs(item.relBearing)));
     const halfDrawableW = Math.max(1, svgW / 2 - refLane - maxRotorRadius - 2);
@@ -837,12 +930,9 @@ function turbineNoise(LwA, distMetres) {
  */
 function calcOptionNoise(lat, lon, optKey) {
     const opt = TURBINE_OPTIONS[optKey];
-    let sumPow = 0;
-    for (const turbine of opt.turbines) {
-        const d = haversine(lat, lon, turbine.lat, turbine.lon);
-        sumPow += Math.pow(10, turbineNoise(opt.LwA, d) / 10);
-    }
-    return sumPow > 0 ? 10 * Math.log10(sumPow) : -Infinity;
+    return sumLden(...opt.turbines.map(turbine =>
+        turbineNoise(opt.LwA, haversine(lat, lon, turbine.lat, turbine.lon))
+    ));
 }
 
 /**
@@ -873,8 +963,8 @@ function calcA2Noise(lat, lon) {
  */
 function sumLden(...levels) {
     const pow = levels
-        .filter(l => isFinite(l))
-        .reduce((s, l) => s + Math.pow(10, l / 10), 0);
+        .filter(Number.isFinite)
+        .reduce((sum, level) => sum + Math.pow(10, level / 10), 0);
     return pow > 0 ? 10 * Math.log10(pow) : -Infinity;
 }
 
@@ -933,23 +1023,15 @@ function dBAdded(background, combined) {
  * @param {number} lat    – observer latitude [degrees]
  * @param {number} lon    – observer longitude [degrees]
  * @param {string} optKey – alternative key ('A'|'B'|'C'|'D')
- * @returns {{ hours: number, turbine: string|null }}
+ * @returns {number} estimated shadow hours per year
  */
 function calcShadowHours(lat, lon, optKey) {
     const opt = TURBINE_OPTIONS[optKey];
-    const D   = opt.rotor_diam;
-    let worstHours   = 0;
-    let worstTurbine = null;
-    for (const turbine of opt.turbines) {
-        // Clamp distance to ≥ 20 m to avoid division-by-zero near the turbine base
-        const d = Math.max(haversine(lat, lon, turbine.lat, turbine.lon), 20);
-        const h = 400 * Math.pow(D / d, 2);
-        if (h > worstHours) { worstHours = h; worstTurbine = turbine.id; }
-    }
-    return {
-        hours:   Math.min(worstHours, 2000), // cap at 2,000 h/yr
-        turbine: worstTurbine
-    };
+    // Every turbine in an alternative shares the same rotor diameter, so h depends
+    // on distance alone: the nearest turbine is always the worst case.
+    // Clamp distance to ≥ 20 m to avoid division-by-zero near the turbine base.
+    const d = Math.max(nearestTurbine(lat, lon, opt).dist, 20);
+    return Math.min(400 * Math.pow(opt.rotor_diam / d, 2), 2000); // cap at 2,000 h/yr
 }
 
 
@@ -963,9 +1045,16 @@ function calcShadowHours(lat, lon, optKey) {
    where:
      N   = number of turbines in the alternative
      P   = rated capacity per turbine [MW]
-     FLH = full-load hours per year [h]
-         = 2,200 h/yr (typical for inland Netherlands;
-           offshore sites achieve 3,500–4,000 h/yr)
+     FLH = full-load hours per year [h], PER ALTERNATIVE (opt.flh)
+
+   FLH is not a single generic figure. Each alternative's value is derived
+   from the output estimate in cNRD Table 3.2, which already accounts for
+   the wind speed at that alternative's hub height:
+
+     A  8 × 2.3 MW × 1,228 h = 22,595 MWh ≈ 22.6 GWh/yr
+     B  4 × 3.8 MW × 1,842 h = 27,998 MWh ≈ 28.0 GWh/yr
+     C  4 × 4.5 MW × 2,222 h = 39,996 MWh ≈ 40.0 GWh/yr
+     D  2 × 7.2 MW × 2,451 h = 35,294 MWh ≈ 35.3 GWh/yr
 
    Households powered:
      HH = E × 1,000 / 3,500
@@ -973,7 +1062,8 @@ function calcShadowHours(lat, lon, optKey) {
 
    CO₂ avoided:
      CO₂ = E × 0.4   [tonnes CO₂/yr]
-     (Dutch grid emission factor ≈ 0.4 kg CO₂/kWh, SEAI/IEA 2023)
+     E [MWh] × 1,000 kWh/MWh × 0.4 kg/kWh ÷ 1,000 kg/tonne = 0.4 × E tonnes
+     (Dutch grid emission factor ≈ 0.4 kg CO₂/kWh, IEA 2023)
    ═══════════════════════════════════════════════════════════════════════ */
 
 /**
@@ -984,11 +1074,12 @@ function calcShadowHours(lat, lon, optKey) {
  */
 function calcEnergy(optKey) {
     const opt = TURBINE_OPTIONS[optKey];
-    const FLH = opt.flh;  // Use option-specific full-load hours
-    const mwh = opt.turbines.length * opt.capacity_mw * FLH;
-    const households = Math.round(mwh * 1000 / 3500);  // 3,500 kWh/yr per household
-    const co2 = Math.round(mwh * 0.4);                 // 0.4 kg CO₂/kWh → tonnes
-    return { mwh: Math.round(mwh), households, co2 };
+    const mwh = opt.turbines.length * opt.capacity_mw * opt.flh;
+    return {
+        mwh:        Math.round(mwh),
+        households: Math.round(mwh * 1000 / 3500), // 3,500 kWh/yr per household
+        co2:        Math.round(mwh * 0.4)          // 0.4 kg CO₂/kWh → tonnes/yr
+    };
 }
 
 
@@ -1007,15 +1098,27 @@ function calcEnergy(optKey) {
  *   > 47 dB Lden – exceedance; permit normally not granted
  *
  * @param {number} lden – Lden value [dB]
- * @returns {{ cls: string, label: string, desc: string }}
+ * @returns {{ cls: string, desc: string }}
  */
 function noiseClass(lden) {
-    if (lden < 35) return { cls: 'badge-green',  label: '< 35 dB', desc: t('veryLow') };
-    if (lden < 40) return { cls: 'badge-green',  label: '< 40 dB', desc: t('low') };
-    if (lden < 45) return { cls: 'badge-yellow', label: '40–45 dB', desc: t('moderate') };
-    if (lden < 47) return { cls: 'badge-orange', label: '45–47 dB', desc: t('limit') };
-    return             { cls: 'badge-red',    label: '> 47 dB', desc: t('exceeded') };
+    if (lden < 35) return { cls: 'badge-green',  desc: t('veryLow') };
+    if (lden < 40) return { cls: 'badge-green',  desc: t('low') };
+    if (lden < 45) return { cls: 'badge-yellow', desc: t('moderate') };
+    if (lden < 47) return { cls: 'badge-orange', desc: t('limit') };
+    return             { cls: 'badge-red',    desc: t('exceeded') };
 }
+
+/**
+ * Text colour matching each badge class, for numbers shown next to a badge.
+ * Yellow is darkened from the legend swatch (#f1c40f) so that it stays legible
+ * as text on the white report background.
+ */
+const BADGE_TEXT_COLOR = {
+    'badge-green':  '#27ae60',
+    'badge-yellow': '#b7950b',
+    'badge-orange': '#e67e22',
+    'badge-red':    '#e74c3c'
+};
 
 /**
  * Classify estimated shadow-flicker hours against the Dutch 6 h/yr norm.
@@ -1076,28 +1179,39 @@ if (URL_STATE.options !== null) {
     for (const key of OPTION_KEYS) activeOptions[key] = URL_STATE.options.includes(key);
 }
 
-// Map layer-group references
-const turbineGroup = L.layerGroup().addTo(map);
-const noiseGroup   = L.layerGroup().addTo(map);
-const safetyGroup  = L.layerGroup();            // off by default
-const a2Group      = L.layerGroup();            // off by default
-const contextGroup = L.layerGroup();            // off by default
+// Map layer-group references, keyed by LAYER_KEYS so that checkbox `toggle-<key>`
+// drives layer group LAYER_GROUPS[key]. Initial visibility comes from
+// DEFAULT_LAYER_KEYS via syncLayerVisibility(), so no group is added here.
+const turbineGroup = L.layerGroup();
+const noiseGroup   = L.layerGroup();
+const safetyGroup  = L.layerGroup();
+const a2Group      = L.layerGroup();
+const contextGroup = L.layerGroup();
+const LAYER_GROUPS = {
+    turbines: turbineGroup,
+    noise:    noiseGroup,
+    safety:   safetyGroup,
+    a2:       a2Group,
+    context:  contextGroup
+};
+
+// Always visible: connector lines from the selected point.
 const selectionGroup = L.layerGroup().addTo(map);
 let clickMarker = null;
 let lastClickedLatLon = null;
 
 function syncLayerVisibility() {
-    document.getElementById('toggle-turbines').checked ? turbineGroup.addTo(map) : map.removeLayer(turbineGroup);
-    document.getElementById('toggle-noise').checked ? noiseGroup.addTo(map) : map.removeLayer(noiseGroup);
-    document.getElementById('toggle-safety').checked ? safetyGroup.addTo(map) : map.removeLayer(safetyGroup);
-    document.getElementById('toggle-a2').checked ? a2Group.addTo(map) : map.removeLayer(a2Group);
-    document.getElementById('toggle-context').checked ? contextGroup.addTo(map) : map.removeLayer(contextGroup);
+    for (const key of LAYER_KEYS) {
+        const group = LAYER_GROUPS[key];
+        if (layerToggle(key).checked) group.addTo(map);
+        else map.removeLayer(group);
+    }
 }
 
 function applyInitialUrlState() {
     if (URL_STATE.layers !== null) {
         for (const key of LAYER_KEYS) {
-            document.getElementById(`toggle-${key}`).checked = URL_STATE.layers.includes(key);
+            layerToggle(key).checked = URL_STATE.layers.includes(key);
         }
     }
     syncLayerVisibility();
@@ -1112,24 +1226,19 @@ function applyInitialUrlState() {
 }
 
 function resetAppState() {
-    LANG = 'nl';
+    setDocumentLang('nl');
 
     for (const key of OPTION_KEYS) activeOptions[key] = true;
-
-    document.getElementById('toggle-turbines').checked = true;
-    document.getElementById('toggle-noise').checked = true;
-    document.getElementById('toggle-safety').checked = false;
-    document.getElementById('toggle-a2').checked = false;
-    document.getElementById('toggle-context').checked = false;
+    for (const key of LAYER_KEYS) layerToggle(key).checked = DEFAULT_LAYER_KEYS.includes(key);
 
     if (clickMarker) {
         map.removeLayer(clickMarker);
         clickMarker = null;
     }
 
+    // Clearing the selection makes redrawAll() empty the selection and context
+    // groups, so no explicit clearLayers() is needed here.
     lastClickedLatLon = null;
-    selectionGroup.clearLayers();
-    contextGroup.clearLayers();
     syncLayerVisibility();
     buildControls();
     redrawAll();
@@ -1172,8 +1281,8 @@ function drawTurbines() {
     turbineGroup.clearLayers();
     for (const [key, opt] of Object.entries(TURBINE_OPTIONS)) {
         if (!activeOptions[key]) continue;
-        const name = LANG === 'nl' ? opt.nameNl : opt.nameEn;
-        const desc = LANG === 'nl' ? opt.descNl : opt.descEn;
+        const name = optionName(opt);
+        const desc = optionDesc(opt);
         for (const turbine of opt.turbines) {
             const marker = L.marker([turbine.lat, turbine.lon], {
                 icon: makeTurbineIcon(opt.color, key),
@@ -1205,7 +1314,7 @@ function drawNoiseContours() {
         if (!activeOptions[key]) continue;
         // Distance [m] at which a single turbine causes 47 dB Lden
         const d47  = Math.pow(10, (opt.LwA - 8 - 47) / 20);
-        const name = LANG === 'nl' ? opt.nameNl : opt.nameEn;
+        const name = optionName(opt);
         for (const turbine of opt.turbines) {
             L.circle([turbine.lat, turbine.lon], {
                 radius: d47, color: opt.color, weight: 1.5,
@@ -1246,26 +1355,14 @@ function drawSelectionLines() {
     for (const [key, opt] of Object.entries(TURBINE_OPTIONS)) {
         if (!activeOptions[key]) continue;
 
-        let nearestTurbine = null;
-        let nearestDist = Infinity;
-        for (const turbine of opt.turbines) {
-            const dist = haversine(lastClickedLatLon.lat, lastClickedLatLon.lon, turbine.lat, turbine.lon);
-            if (dist < nearestDist) {
-                nearestDist = dist;
-                nearestTurbine = turbine;
-            }
-        }
-
-        if (!nearestTurbine) continue;
-
-        const name = LANG === 'nl' ? opt.nameNl : opt.nameEn;
-        L.polyline([selected, [nearestTurbine.lat, nearestTurbine.lon]], {
+        const { turbine, dist } = nearestTurbine(lastClickedLatLon.lat, lastClickedLatLon.lon, opt);
+        L.polyline([selected, [turbine.lat, turbine.lon]], {
             color: opt.color,
             weight: 2.5,
             opacity: 0.85,
             dashArray: '6 6'
         }).addTo(selectionGroup)
-          .bindTooltip(`${name}: ${Math.round(nearestDist)} m`, { sticky: true });
+          .bindTooltip(`${optionName(opt)}: ${Math.round(dist)} m`, { sticky: true });
     }
 
     const nearestA2 = nearestPointOnPolyline(lastClickedLatLon.lat, lastClickedLatLon.lon, A2_PATH);
@@ -1276,11 +1373,6 @@ function drawSelectionLines() {
         dashArray: '4 6'
     }).addTo(selectionGroup)
       .bindTooltip(`${t('distToA2')}: ${Math.round(nearestA2.dist)} m`, { sticky: true });
-}
-
-function offsetLatLonMetres(lat, lon, eastMetres, northMetres) {
-    const { xScale, yScale } = projectLatLon(lat, lon, lat, lon);
-    return unprojectPoint(eastMetres, northMetres, lat, lon, xScale, yScale);
 }
 
 function makeContextIcon(emoji) {
@@ -1410,8 +1502,8 @@ function buildControls() {
     container.innerHTML = '';
 
     for (const [key, opt] of Object.entries(TURBINE_OPTIONS)) {
-        const name = LANG === 'nl' ? opt.nameNl : opt.nameEn;
-        const desc = LANG === 'nl' ? opt.descNl : opt.descEn;
+        const name = optionName(opt);
+        const desc = optionDesc(opt);
 
         const btn = document.createElement('div');
         btn.className = 'option-btn' + (activeOptions[key] ? ' active' : '');
@@ -1444,31 +1536,13 @@ document.getElementById('btn-fullscreen').addEventListener('click', () => {
 
 
 /* ── Layer checkbox listeners ── */
-document.getElementById('toggle-turbines').addEventListener('change', e => {
-    syncLayerVisibility();
-    refreshCurrentReport();
-    updateUrlState();
-});
-document.getElementById('toggle-noise').addEventListener('change', e => {
-    syncLayerVisibility();
-    refreshCurrentReport();
-    updateUrlState();
-});
-document.getElementById('toggle-safety').addEventListener('change', e => {
-    syncLayerVisibility();
-    refreshCurrentReport();
-    updateUrlState();
-});
-document.getElementById('toggle-a2').addEventListener('change', e => {
-    syncLayerVisibility();
-    refreshCurrentReport();
-    updateUrlState();
-});
-document.getElementById('toggle-context').addEventListener('change', e => {
-    syncLayerVisibility();
-    refreshCurrentReport();
-    updateUrlState();
-});
+for (const key of LAYER_KEYS) {
+    layerToggle(key).addEventListener('change', () => {
+        syncLayerVisibility();
+        refreshCurrentReport();
+        updateUrlState();
+    });
+}
 
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1478,10 +1552,19 @@ document.getElementById('toggle-context').addEventListener('change', e => {
 document.getElementById('btn-nl').addEventListener('click', () => setLang('nl'));
 document.getElementById('btn-en').addEventListener('click', () => setLang('en'));
 
-function setLang(lang) {
+/**
+ * Set the active language and keep <html lang> in step, so that screen readers
+ * and translation tools announce the page in the language actually rendered.
+ * Does not re-render: callers decide what needs refreshing.
+ */
+function setDocumentLang(lang) {
     LANG = lang;
-    document.getElementById('btn-nl').classList.toggle('active', lang === 'nl');
-    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.documentElement.lang = lang;
+}
+
+function setLang(lang) {
+    setDocumentLang(lang);
+    // buildControls() syncs the NL/EN button states along with the rest of the panel.
     buildControls();
     redrawAll();
     refreshCurrentReport();
@@ -1583,32 +1666,24 @@ function updateInfoPanel(lat, lon) {
     const a2Noise = calcA2Noise(lat, lon);
     const a2Dist  = Math.round(distToPolyline(lat, lon, A2_PATH));
 
-    const noiseRows  = [];
-    const shadowRows = [];
-    const safetyRows = [];
-
-    for (const [key, opt] of Object.entries(TURBINE_OPTIONS)) {
-        if (!activeOptions[key]) continue;
-        const name = LANG === 'nl' ? opt.nameNl : opt.nameEn;
-
-        // Noise
+    // One row per active alternative, carrying every value the sections below
+    // need. Noise, shadow flicker, safety and apparent size all key off the
+    // nearest turbine, so its distance is resolved once here.
+    const rows = OPTION_KEYS.filter(key => activeOptions[key]).map(key => {
+        const opt       = TURBINE_OPTIONS[key];
         const windNoise = calcOptionNoise(lat, lon, key);
         const combined  = sumLden(a2Noise, windNoise);
-        const added     = dBAdded(a2Noise, combined);
-        const nc        = noiseClass(windNoise);
-        noiseRows.push({ key, opt, name, windNoise, combined, added, nc });
-
-        // Shadow
-        const sh = calcShadowHours(lat, lon, key);
-        shadowRows.push({ key, opt, name, ...sh });
-
-        // Safety (closest turbine distance)
-        let minDist = Infinity;
-        for (const turbine of opt.turbines) {
-            minDist = Math.min(minDist, haversine(lat, lon, turbine.lat, turbine.lon));
-        }
-        safetyRows.push({ key, opt, name, minDist: Math.round(minDist) });
-    }
+        return {
+            key,
+            opt,
+            windNoise,
+            combined,
+            added:       dBAdded(a2Noise, combined),
+            rating:      noiseClass(windNoise),
+            shadowHours: calcShadowHours(lat, lon, key),
+            nearestDist: nearestTurbine(lat, lon, opt).dist
+        };
+    });
 
     // ── Build HTML ──
     let html = '';
@@ -1628,7 +1703,7 @@ function updateInfoPanel(lat, lon) {
     </div>`;
 
     /* ── Noise comparison table ── */
-    if (noiseRows.length > 0) {
+    if (rows.length > 0) {
         html += `<div class="info-section">
             <h4>${t('noiseTitle')}</h4>
             <table class="noise-table">
@@ -1643,11 +1718,11 @@ function updateInfoPanel(lat, lon) {
                     </tr>
                 </thead>
                 <tbody>`;
-        for (const r of noiseRows) {
-            const noiseColor = r.windNoise > 47 ? '#e74c3c'
-                             : r.windNoise > 45 ? '#e67e22'
-                             : r.windNoise > 40 ? '#e67e22'
-                             : '#27ae60';
+        for (const r of rows) {
+            // Colour the Lden figure to match the badge beside it, so the number
+            // and the rating can never disagree.
+            const noiseColor = BADGE_TEXT_COLOR[r.rating.cls];
+            // ΔdB: ≥ 3 dB is a clearly audible increase, ≥ 1 dB a marginal one.
             const deltaColor = r.added > 3 ? '#e74c3c'
                              : r.added > 1 ? '#e67e22'
                              : '#27ae60';
@@ -1657,7 +1732,7 @@ function updateInfoPanel(lat, lon) {
                 <td>${a2Noise.toFixed(1)}</td>
                 <td>${r.combined.toFixed(1)}</td>
                 <td style="color:${deltaColor}">+${r.added.toFixed(1)}</td>
-                <td><span class="badge ${r.nc.cls}">${r.nc.desc}</span></td>
+                <td><span class="badge ${r.rating.cls}">${r.rating.desc}</span></td>
             </tr>`;
         }
         html += `</tbody></table>
@@ -1668,13 +1743,14 @@ function updateInfoPanel(lat, lon) {
     }
 
     /* ── Shadow flicker ── */
-    if (shadowRows.length > 0) {
+    if (rows.length > 0) {
         html += `<div class="info-section"><h4>${t('shadowTitle')}</h4>`;
-        for (const r of shadowRows) {
-            const sc      = shadowClass(r.hours);
-            const barW    = Math.min(100, (r.hours / 16) * 100);
-            const barColor = r.hours < 6 ? '#27ae60' : r.hours < 16 ? '#e67e22' : '#e74c3c';
-            const hLabel   = r.hours > 1 ? r.hours.toFixed(1) : '<1';
+        for (const r of rows) {
+            const sc       = shadowClass(r.shadowHours);
+            // Bar is full at 16 h/yr, the top of the "above limit" band.
+            const barW     = Math.min(100, (r.shadowHours / 16) * 100);
+            const barColor = BADGE_TEXT_COLOR[sc.cls];
+            const hLabel   = r.shadowHours >= 1 ? r.shadowHours.toFixed(1) : '<1';
             html += `<div class="shadow-row">
                 <div class="shadow-opt">
                     <span style="color:${r.opt.color};font-weight:700">${r.key}</span>
@@ -1689,13 +1765,13 @@ function updateInfoPanel(lat, lon) {
     }
 
     /* ── External safety ── */
-    if (safetyRows.length > 0) {
+    if (rows.length > 0) {
         html += `<div class="info-section"><h4>${t('safetyTitle')}</h4>`;
-        for (const r of safetyRows) {
-            const sc = safetyClass(r.minDist, r.opt.tip_height);
+        for (const r of rows) {
+            const sc = safetyClass(r.nearestDist, r.opt.tip_height);
             html += `<div class="effect-row">
                 <span class="effect-label" style="color:${r.opt.color};font-weight:700">${r.key}</span>
-                <span>${r.minDist} m ${t('safetyFrom')}</span>
+                <span>${Math.round(r.nearestDist)} m ${t('safetyFrom')}</span>
                 <span class="badge ${sc.cls}">${sc.label}</span>
             </div>`;
         }
@@ -1732,13 +1808,11 @@ function updateInfoPanel(lat, lon) {
     html += `<div class="info-section">
         <h4>${t('landscapeTitle')}</h4>
         <div style="font-size:11px;line-height:1.6;color:#444;">`;
-    for (const [key, opt] of Object.entries(TURBINE_OPTIONS)) {
-        if (!activeOptions[key]) continue;
-        const nearestDist = Math.min(...opt.turbines.map(turbine => haversine(lat, lon, turbine.lat, turbine.lon)));
-        const apparentDeg = apparentHeightDegrees(opt.tip_height, nearestDist);
+    for (const r of rows) {
+        const apparentDeg = elevationDegrees(r.opt.tip_height, r.nearestDist);
         html += `<div class="effect-row">
-            <span class="effect-label" style="color:${opt.color};font-weight:700">${key}</span>
-            <span class="effect-value">${Math.round(nearestDist / 100) / 10} km | ${opt.tip_height} m ${t('tipHeight').toLowerCase()} | ~${apparentDeg.toFixed(1)}° ${t('apparentHeight')}</span>
+            <span class="effect-label" style="color:${r.opt.color};font-weight:700">${r.key}</span>
+            <span class="effect-value">${(r.nearestDist / 1000).toFixed(1)} km | ${r.opt.tip_height} m ${t('tipHeight').toLowerCase()} | ~${apparentDeg.toFixed(1)}° ${t('apparentHeight')}</span>
         </div>`;
     }
     html += `<div style="font-size:10px;color:#95a5a6;margin-top:3px;">${t('landscapeNote')}</div>

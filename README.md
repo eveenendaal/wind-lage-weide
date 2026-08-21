@@ -54,6 +54,30 @@ documents/   – source PDF reports and KML file
 
 See [documents/README.md](documents/README.md) for details on the supporting documentation.
 
+### Turbine specifications
+
+Dimensions, capacities and turbine counts are taken verbatim from **cNRD Table 3.2**
+(*Bandbreedte windturbines Windpark Lage Weide*):
+
+| Parameter                    |    A |     B |     C |     D |
+|------------------------------|-----:|------:|------:|------:|
+| Capacity per turbine [MW]    |  2.3 |   3.8 |   4.5 |   7.2 |
+| Number of turbines           |    8 |     4 |     4 |     2 |
+| Max tip height [m]           |   90 |   150 |   210 |   252 |
+| Max rotor diameter [m]       |   71 |   117 |   150 |   172 |
+| Max hub height [m]           |   54 |  91.5 |   135 |   166 |
+| Estimated output [GWh/yr]    | 22.6 |  28.0 |  40.0 |  35.3 |
+
+In every column `hub height + rotor diameter / 2 = tip height`.
+
+The one turbine parameter *not* in the cNRD is the **sound power level `LwA`**.
+The cNRD does not publish one per alternative, so the app assumes an indicative
+value per turbine size class (105 / 107 / 109 / 111 dB(A) for A / B / C / D).
+Noise results scale directly with this assumption.
+
+Turbine positions come from `documents/Wind at Lage Weide.kml`, whose coordinates
+were estimated from the maps in the cNRD and are not official survey positions.
+
 ### Calculation notes
 
 All calculations are **simplified indicative estimates** for public orientation.
@@ -118,14 +142,20 @@ Reference: *Handboek Risicozonering Windturbines* (2020).
 
 #### 5. Landscape / apparent size estimate
 
-For the nearest turbine in each active alternative, the app also estimates the apparent angular height:
+For the nearest turbine in each active alternative, the app estimates the apparent
+angular height — the angle the turbine's silhouette spans from base to tip:
 
 ```
-θ ≈ 2 · atan(H / 2d)    [degrees]
+θ = atan(H / d)    [degrees]
 ```
 
 - `H` = tip height of the turbine
 - `d` = distance from the selected location
+
+Observer and turbine base both stand on the ground, so this is a plain elevation
+angle. (The textbook angular-diameter formula `2·atan(H / 2d)` describes an object
+centred on the line of sight, such as the moon, and does not apply here.) The same
+function drives the horizon silhouette, so the two sections always agree.
 
 #### 6. Energy output
 
@@ -135,11 +165,23 @@ HH   = E × 1,000 / 3,500    [households]
 CO₂  = E × 0.4              [tonnes CO₂/year]
 ```
 
-| Parameter            | Value          | Source                                    |
-|----------------------|----------------|-------------------------------------------|
-| FLH                  | 2,200 h/yr     | Typical inland Netherlands (Windstats NL) |
-| Household use        | 3,500 kWh/yr   | CBS 2023                                  |
-| Grid emission factor | 0.4 kg CO₂/kWh | IEA 2023                                  |
+Full-load hours are **per alternative**, not one generic figure. Each value is
+derived from the output estimate in cNRD Table 3.2, which already accounts for the
+wind speed at that alternative's hub height — which is why the short turbines of
+alternative A reach far fewer full-load hours than the tall turbines of D:
+
+| Alt |            E = N × P × FLH | cNRD Table 3.2 |
+|-----|----------------------------|----------------|
+| A   | 8 × 2.3 MW × 1,228 h/yr    | 22.6 GWh/yr    |
+| B   | 4 × 3.8 MW × 1,842 h/yr    | 28.0 GWh/yr    |
+| C   | 4 × 4.5 MW × 2,222 h/yr    | 40.0 GWh/yr    |
+| D   | 2 × 7.2 MW × 2,451 h/yr    | 35.3 GWh/yr    |
+
+| Parameter            | Value           | Source          |
+|----------------------|-----------------|-----------------|
+| FLH                  | 1,228–2,451 h/yr | cNRD Table 3.2 |
+| Household use        | 3,500 kWh/yr    | CBS 2023        |
+| Grid emission factor | 0.4 kg CO₂/kWh  | IEA 2023        |
 
 ### Data sources
 
@@ -184,6 +226,30 @@ documents/   – bron-PDF's en KML-bestand
 ```
 
 Zie [documents/README.md](documents/README.md) voor informatie over de ondersteunende documentatie.
+
+### Turbinespecificaties
+
+Afmetingen, vermogens en aantallen zijn letterlijk overgenomen uit **cNRD Tabel 3.2**
+(*Bandbreedte windturbines Windpark Lage Weide*):
+
+| Parameter                        |    A |     B |     C |     D |
+|----------------------------------|-----:|------:|------:|------:|
+| Vermogen per turbine [MW]        |  2,3 |   3,8 |   4,5 |   7,2 |
+| Aantal windturbines              |    8 |     4 |     4 |     2 |
+| Maximale tiphoogte [m]           |   90 |   150 |   210 |   252 |
+| Maximale rotordiameter [m]       |   71 |   117 |   150 |   172 |
+| Maximale ashoogte [m]            |   54 |  91,5 |   135 |   166 |
+| Geschatte opbrengst [GWh/jaar]   | 22,6 |  28,0 |  40,0 |  35,3 |
+
+In elke kolom geldt `ashoogte + rotordiameter / 2 = tiphoogte`.
+
+De enige turbineparameter die *niet* in de cNRD staat, is het **bronvermogen `LwA`**.
+De cNRD noemt geen bronvermogen per alternatief, dus hanteert de app een indicatieve
+waarde per turbinegrootte (105 / 107 / 109 / 111 dB(A) voor A / B / C / D).
+De geluidsresultaten schalen direct mee met die aanname.
+
+Turbineposities komen uit `documents/Wind at Lage Weide.kml`; die coördinaten zijn
+geschat op basis van de kaarten in de cNRD en zijn geen officiële meetposities.
 
 ### Berekeningsnotities
 
@@ -249,14 +315,20 @@ Referentie: *Handboek Risicozonering Windturbines* (2020).
 
 #### 5. Landschap / schijnbare grootte
 
-Voor de dichtstbijzijnde turbine in elk actief alternatief schat de app ook de schijnbare hoekhoogte:
+Voor de dichtstbijzijnde turbine in elk actief alternatief schat de app de schijnbare
+hoekhoogte — de hoek die het silhouet van voet tot tip beslaat:
 
 ```
-θ ≈ 2 · atan(H / 2d)    [graden]
+θ = atan(H / d)    [graden]
 ```
 
 - `H` = tiphoogte van de turbine
 - `d` = afstand vanaf de geselecteerde locatie
+
+Waarnemer en turbinevoet staan beide op maaiveld, dus dit is een gewone
+elevatiehoek. (De formule voor hoekdiameter `2·atan(H / 2d)` geldt voor een object
+gecentreerd op de kijklijn, zoals de maan, en is hier niet van toepassing.) Het
+horizonsilhouet gebruikt dezelfde functie, zodat beide secties altijd overeenkomen.
 
 #### 6. Energieopbrengst
 
@@ -266,11 +338,23 @@ HH   = E × 1.000 / 3.500    [huishoudens]
 CO₂  = E × 0,4              [ton CO₂/jaar]
 ```
 
-| Parameter                           | Waarde         | Bron                                 |
-|-------------------------------------|----------------|--------------------------------------|
-| VLU (vollasturen)                   | 2.200 uur/jaar | Typisch binnenland NL (Windstats NL) |
-| Huishoudverbruik                    | 3.500 kWh/jaar | CBS 2023                             |
-| CO₂-emissiefactor elektriciteitsnet | 0,4 kg CO₂/kWh | IEA 2023                             |
+Vollasturen zijn **per alternatief**, niet één generiek getal. Elke waarde is
+afgeleid uit de opbrengstschatting in cNRD Tabel 3.2, die al rekening houdt met de
+windsnelheid op de ashoogte van dat alternatief — daarom halen de lage turbines van
+alternatief A veel minder vollasturen dan de hoge turbines van D:
+
+| Alt | E = N × P × VLU            | cNRD Tabel 3.2 |
+|-----|----------------------------|----------------|
+| A   | 8 × 2,3 MW × 1.228 uur/jr  | 22,6 GWh/jaar  |
+| B   | 4 × 3,8 MW × 1.842 uur/jr  | 28,0 GWh/jaar  |
+| C   | 4 × 4,5 MW × 2.222 uur/jr  | 40,0 GWh/jaar  |
+| D   | 2 × 7,2 MW × 2.451 uur/jr  | 35,3 GWh/jaar  |
+
+| Parameter                           | Waarde              | Bron           |
+|-------------------------------------|---------------------|----------------|
+| VLU (vollasturen)                   | 1.228–2.451 uur/jaar | cNRD Tabel 3.2 |
+| Huishoudverbruik                    | 3.500 kWh/jaar      | CBS 2023       |
+| CO₂-emissiefactor elektriciteitsnet | 0,4 kg CO₂/kWh      | IEA 2023       |
 
 ### Gegevensbronnen
 
